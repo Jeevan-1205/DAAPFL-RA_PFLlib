@@ -1,0 +1,51 @@
+# =====================================================================
+# Common run config — lives in system/config.yaml (next to main.py)
+#
+# Edit this file directly before each run. No need to pass a full path:
+#   cd /DATA/BU_Internship_Jeevan/Research/PFLlib/system
+#   python main.py --config config.yaml
+#
+# For a full LODO sweep (all 7 folds), don't hand-edit held_out_idx each
+# time — use run_lodo_sweep.sh instead, which edits this file in place
+# for you and runs all folds back to back.
+# =====================================================================
+
+algorithm: FedAvg
+dataset: xBD
+model: SiameseUNet
+num_classes: 5
+num_clients: 7
+
+protocol: lodo          # "lodo" or "standard"
+held_out_idx: 0         # which client is held out (0-6), only used when protocol: lodo
+
+global_rounds: 200       # bumped from the round-1 smoke test to a real run
+batch_size: 8
+local_learning_rate: 0.0001
+
+output_dir: fedavg_lodo_gr200   # groups all fold results + summary.csv under results/<output_dir>/
+
+# Per-class focal-loss weights (alpha), in class-index order 0..num_classes-1.
+# Leave as null until you run scripts/compute_class_weights.py against your
+# tile cache -- classes 1-4 (damage severities) are heavily underrepresented
+# vs class 0 (no-damage), and without weighting here the model just learns
+# to predict class 0 everywhere. See compute_class_weights.py for details.
+class_weights: [0.0787, 0.4698, 1.3944, 1.3535, 1.7037]   # e.g. [0.21, 1.85, 3.40, 4.95, 4.80]
+
+
+# NOTE on class 2 vs class 3: they have almost identical pixel frequency
+# (0.31% vs 0.33%), so any frequency-based formula will keep giving them
+# near-identical weights -- yet in the last run class 2 partially recovered
+# while class 3 died completely (dice=0.0 for the last 100 epochs). That
+# points to something beyond pure class imbalance (likely confusion with a
+# neighboring damage class). Run scripts/diagnose_confusion.py against the
+# finished model BEFORE hand-tuning class_weights further -- if class 3's
+# recall is landing mostly on a neighboring class rather than class 0,
+# raising its weight alone won't fix it.
+ 
+dice_weight: 0.7    # was 0.5 -- dice already balances per-class fairly, focal doesn't
+focal_weight: 0.3   # was 0.5
+ 
+lr_schedule: cosine   # decays lr to ~0 over `global_rounds` epochs -- the last run's
+                       # loss/mIoU plateaued hard after ~epoch 100 at a constant lr
+ 

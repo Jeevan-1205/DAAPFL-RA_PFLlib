@@ -1,0 +1,22 @@
+# Results
+results/
+checkpoints/
+outputs/
+
+# Models
+models/
+*.pt
+
+# Tile cache
+dataset/xBD/tile_cache/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
