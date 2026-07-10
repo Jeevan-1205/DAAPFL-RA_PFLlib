@@ -47,7 +47,7 @@ import torch.nn.functional as F
 
 from flcore.trainmodel.encoder import ResNetEncoder
 from flcore.trainmodel.decoder import UNetDecoder, SegmentationHead
-from flcore.trainmodel.fusion import DifferenceFusion
+from flcore.trainmodel.fusion import AbsoluteDifferenceFusion
 
 
 class SiameseUNet(nn.Module):
@@ -79,7 +79,7 @@ class SiameseUNet(nn.Module):
         self.encoder = ResNetEncoder(backbone, pretrained, in_channels)
 
         # ---- Feature fusion (pre/post change representation) ----
-        self.fusion = DifferenceFusion()
+        self.fusion = AbsoluteDifferenceFusion()
 
         # ---- Private decoder (personalized in FL) ----
         self.decoder = UNetDecoder(

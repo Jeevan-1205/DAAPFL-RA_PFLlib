@@ -142,6 +142,7 @@ class XBDCachedDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, index):
+        
         if isinstance(index, slice):
             return XBDCachedDataset(self.image_paths[index], None,
                                      self.image_size, self.cache_root)
@@ -160,6 +161,14 @@ class XBDCachedDataset(Dataset):
         x = torch.from_numpy(stacked.transpose(2, 0, 1).copy()).type(torch.float32)
         y = torch.from_numpy(mask.copy()).type(torch.int64)
         return x, y
+    def has_damage(self, index):
+            pre_path, post_path = self.image_paths[index]
+            cache_file = self._cache_path(pre_path, post_path)
+
+            with np.load(cache_file) as z:
+                mask = z["mask"]
+
+            return np.any(mask >= 2)
 
     def _cache_path(self, pre_path, post_path):
         stem = Path(pre_path).stem + "__" + Path(post_path).stem

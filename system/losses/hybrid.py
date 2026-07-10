@@ -10,17 +10,18 @@ from .dice import DiceLoss
 class HybridDiceFocalLoss(nn.Module):
     def __init__(self, dice_weight: float = 0.5, focal_weight: float = 0.5,
                  gamma: float = 2.0, alpha: Optional[Sequence[float]] = None,
-                 dice_smooth: float = 1.0, ignore_index: int = -100):
+                 dice_smooth: float = 1.0, ignore_index: int = -100,
+                 include_background: bool = False):
         super().__init__()
-        print(f"[Hybrid] gamma={gamma}, alpha={alpha}")
+        print(f"[Hybrid] gamma={gamma}, alpha={alpha}, include_background={include_background}")
         self.dw, self.fw = dice_weight, focal_weight
         self.focal = FocalLoss(
             alpha=alpha,
             gamma=gamma,
         )
-        self.dice = DiceLoss(         # we'll improve this in a second
+        self.dice = DiceLoss(
             smooth=dice_smooth,
-            include_background=True,
+            include_background=include_background,
             ignore_index=ignore_index,
         )
 

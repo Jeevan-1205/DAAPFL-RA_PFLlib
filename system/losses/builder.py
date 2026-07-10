@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from .dice import DiceLoss
@@ -8,20 +9,33 @@ from .hybrid import HybridDiceFocalLoss
 def build_loss(
     name="dice_focal",
     num_classes=5,
+    alpha=None,
+    include_background=False,
     **kwargs,
 ):
     name = name.lower()
 
+    if alpha is None:
+        print("[build_loss] WARNING: no class weights (alpha) provided — "
+              "rare classes will be unweighted in the loss.")
+
     if name == "cross_entropy":
-        return nn.CrossEntropyLoss()
+        weight = None
+        if alpha is not None:
+            weight = torch.as_tensor(alpha, dtype=torch.float32)
+        return nn.CrossEntropyLoss(weight=weight)
 
     if name == "dice":
-        return DiceLoss(**kwargs)
+        return DiceLoss(include_background=include_background, **kwargs)
 
     if name == "focal":
-        return FocalLoss(**kwargs)
+        return FocalLoss(alpha=alpha, **kwargs)
 
     if name == "dice_focal":
-        return HybridDiceFocalLoss(**kwargs)
+        return HybridDiceFocalLoss(
+            alpha=alpha,
+            include_background=include_background,
+            **kwargs,
+        )
 
     raise ValueError(f"Unknown loss: {name}")

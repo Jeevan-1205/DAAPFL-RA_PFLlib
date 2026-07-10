@@ -11,7 +11,12 @@ def build_loss(cfg):
 
     alpha = lc.get("class_weights", None)
     ignore = int(lc.get("ignore_index", -100))
+    include_background = bool(lc.get("include_background", False))
     name = lc.name.lower()
+
+    if alpha is None:
+        print("[factory.build_loss] WARNING: no class_weights set in config — "
+              "rare classes will be unweighted in the loss.")
 
     if name == "focal":
         return FocalLoss(
@@ -24,6 +29,7 @@ def build_loss(cfg):
         return DiceLoss(
             smooth=float(lc.dice_smooth),
             ignore_index=ignore,
+            include_background=include_background,
         )
 
     if name == "hybrid":
@@ -34,6 +40,7 @@ def build_loss(cfg):
             alpha=alpha,
             dice_smooth=float(lc.dice_smooth),
             ignore_index=ignore,
+            include_background=include_background,
         )
 
     raise ValueError(f"Unknown loss '{name}'")

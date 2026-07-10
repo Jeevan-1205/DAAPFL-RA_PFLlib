@@ -33,7 +33,8 @@ from utils.segmentation_metrics import segmentation_confusion_matrix, segmentati
 from utils.csv_logger import CSVLogger, make_run_id
 from flcore.trainmodel.siamese_unet import SiameseUNet
 
-
+from utils.visualization import save_prediction_visualization
+from torch.utils.data import WeightedRandomSampler
 # ──────────────────────────────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────────────────────────────
@@ -333,17 +334,64 @@ def compute_f1_dam(confusion, damage_classes, eps=1e-8):
     return f1_dam, per_class_f1
 
 
-def evaluate(model, loader, num_classes, device):
+def evaluate(model, loader, num_classes, device,
+             save_predictions=False,
+             prediction_dir=None):
+
     model.eval()
+
     confusion = torch.zeros(num_classes, num_classes, dtype=torch.int64)
+
+    saved = 0                      # <-- ADD THIS
+
     with torch.no_grad():
+
         for x, y in loader:
+
             x = x.to(device)
             y = y.to(device)
+
             output = model(x)
+            
+
             pred = torch.argmax(output, dim=1)
-            confusion += segmentation_confusion_matrix(pred, y, num_classes)
+
+            # ===========================================
+            # SAVE VISUALIZATIONS HERE
+            # ===========================================
+            if save_predictions and saved < 10:
+
+                batch_size = x.size(0)
+
+                for i in range(batch_size):
+
+                    if saved >= 10:
+                        break
+
+                    pre = x[i, :3]
+                    post = x[i, 3:]
+
+                    save_prediction_visualization(
+                        pre,
+                        post,
+                        y[i],
+                        pred[i],
+                        prediction_dir,
+                        saved,
+                    )
+
+                    saved += 1
+            # ===========================================
+
+            confusion += segmentation_confusion_matrix(
+                pred,
+                y,
+                num_classes,
+            )
+
     metrics = segmentation_metrics(confusion)
+
+
 
     damage_classes = tuple(range(1, num_classes))  # every class except 0 (background)
     f1_dam, f1_dam_per_class = compute_f1_dam(confusion, damage_classes)
@@ -497,11 +545,12 @@ def train_one_epoch(model, loader, loss_fn, optimizer, device):
         bar_format="  {l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}",
     )
 
-    for x, y in batch_bar:
+    for batch_idx, (x, y) in enumerate(batch_bar):
         x = x.to(device)
         y = y.to(device)
 
         output = model(x)
+        
         loss = loss_fn(output, y)
 
         optimizer.zero_grad()
@@ -537,13 +586,49 @@ def main():
     print_banner(args.dataset)
 
     # ── Dataset ───────────────────────────────────────────────────────
-    train_ds = build_pooled_dataset(args.dataset, args.num_clients, is_train=True)
+    train_ds = build_pooled_dataset(
+        args.dataset,
+        args.num_clients,
+        is_train=True,
+    )
+
+    print(f"Original training tiles: {len(train_ds)}")
     test_ds = build_pooled_dataset(args.dataset, args.num_clients, is_train=False)
+    print("Building weighted sampler...")
+
+    weights = []
+    
+    damage_tiles = 0
+
+    background_tiles = 0
+    damage_weight = getattr(args, "damage_sampling_weight", 5.0)
+
+    for client_ds in train_ds.datasets:
+        for i in range(len(client_ds)):
+            if client_ds.has_damage(i):
+                weights.append(damage_weight)
+                damage_tiles += 1
+            else:
+                weights.append(1.0)
+                background_tiles += 1
+    print(f"Damage tiles     : {damage_tiles}")
+    print(f"Background tiles : {background_tiles}")
+
+    sampler = WeightedRandomSampler(
+        weights,
+        num_samples=len(weights),
+        replacement=True,
+    )
 
     train_loader = DataLoader(
-        train_ds, batch_size=args.batch_size, shuffle=True,
-        drop_last=True, num_workers=NUM_WORKERS, pin_memory=True,
-        persistent_workers=True, prefetch_factor=2,
+        train_ds,
+        batch_size=args.batch_size,
+        sampler=sampler,
+        shuffle=False,
+        num_workers=NUM_WORKERS,
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=2,
     )
     test_loader = DataLoader(
         test_ds, batch_size=args.batch_size, shuffle=False,
@@ -709,7 +794,26 @@ def main():
         }
 
         if epoch % args.eval_gap == 0:
-            epoch_metrics = evaluate(model, test_loader, args.num_classes, device)
+
+            save_preds = (
+                epoch == 0 or
+                (epoch + 1) % 5 == 0
+            )
+
+            prediction_dir = os.path.join(
+                result_path,
+                "predictions",
+                f"epoch_{epoch+1:03d}",
+            )
+
+            epoch_metrics = evaluate(
+                model,
+                test_loader,
+                args.num_classes,
+                device,
+                save_predictions=save_preds,
+                prediction_dir=prediction_dir,
+            )
             pixel_acc = epoch_metrics["pixel_accuracy"]
             dice = epoch_metrics["dice"]
             miou = epoch_metrics["mean_iou"]

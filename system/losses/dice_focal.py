@@ -13,13 +13,14 @@ class DiceFocalLoss(nn.Module):
         focal_weight=1.0,
         gamma=2.0,
         alpha=None,
-        include_background=True,
+        include_background=False,
+        ignore_index=-100,
     ):
         super().__init__()
 
         self.dice = DiceLoss(
-            num_classes=num_classes,
             include_background=include_background,
+            ignore_index=ignore_index,
         )
 
         self.focal = FocalLoss(

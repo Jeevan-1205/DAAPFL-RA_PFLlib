@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 
-class DifferenceFusion(nn.Module):
+class AbsoluteDifferenceFusion(nn.Module):
     """Fuse pre/post multi-scale features via ``post - pre``."""
 
     def forward(
@@ -14,7 +14,7 @@ class DifferenceFusion(nn.Module):
         feats_post: List[torch.Tensor],
     ) -> List[torch.Tensor]:
         self._validate_features(feats_pre, feats_post)
-        return [post - pre for pre, post in zip(feats_pre, feats_post)]
+        return [torch.abs(post - pre) for pre, post in zip(feats_pre, feats_post)]
 
     @staticmethod
     def _validate_features(
