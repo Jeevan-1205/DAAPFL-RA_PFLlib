@@ -125,6 +125,12 @@ def print_training_config(args, device, run_name, result_path) -> None:
     print(f"  Checkpoint gap : {args.checkpoint_gap}")
     print(f"  Loss balance   : dice={args.dice_weight}, focal={args.focal_weight}")
     print(f"  LR schedule    : {args.lr_schedule}")
+    if args.lr_schedule == "step":
+        print(f"    step_size={args.lr_step_size}, gamma={args.lr_gamma}")
+    elif args.lr_schedule == "cosine_warm_restarts":
+        print(f"    T_0={args.lr_t0}, T_mult={args.lr_tmult}")
+    elif args.lr_schedule == "plateau":
+        print(f"    metric={args.lr_plateau_metric}, patience={args.lr_plateau_patience}, factor={args.lr_plateau_factor}")
     print(f"  Device         : {device}")
     print(f"  Output         : {result_path}/")
     print(f"  Run name       : {run_name}")
@@ -136,7 +142,7 @@ def print_training_config(args, device, run_name, result_path) -> None:
 
 
 def print_resume_info(checkpoint_path: str, start_epoch: int, best_miou: float,
-                      best_pixel_acc: float, best_dice: float) -> None:
+                      best_pixel_acc: float, best_dice: float, best_f1_dam: float = 0.0) -> None:
     """Print resume information when loading from a checkpoint."""
     print_section("Resuming from Checkpoint")
     print(f"  Checkpoint     : {checkpoint_path}")
@@ -144,6 +150,7 @@ def print_resume_info(checkpoint_path: str, start_epoch: int, best_miou: float,
     print(f"  Best mIoU      : {best_miou:.4f}")
     print(f"  Best Pixel Acc : {best_pixel_acc:.4f}")
     print(f"  Best Dice      : {best_dice:.4f}")
+    print(f"  Best F1-dam    : {best_f1_dam:.4f}")
 
 
 def print_epoch_summary(epoch: int, total_epochs: int, avg_loss: float,
@@ -157,9 +164,12 @@ def print_epoch_summary(epoch: int, total_epochs: int, avg_loss: float,
         pixel_acc = metrics["pixel_accuracy"]
         dice = metrics["dice"]
         miou = metrics["mean_iou"]
+        f1_dam = metrics.get("f1_dam")
         print(f"  Pixel Acc    : {pixel_acc:.4f}")
         print(f"  Dice         : {dice:.4f}")
         print(f"  mIoU         : {miou:.4f}")
+        if f1_dam is not None:
+            print(f"  F1-dam       : {f1_dam:.4f}")
         star = " ★" if miou >= best_miou else ""
         print(f"  Best mIoU    : {best_miou:.4f}{star}")
     else:
@@ -175,7 +185,7 @@ def print_epoch_summary(epoch: int, total_epochs: int, avg_loss: float,
 
 def save_checkpoint(path: str, epoch: int, model, optimizer, scheduler,
                     best_miou: float, best_pixel_acc: float, best_dice: float,
-                    args) -> None:
+                    args, best_f1_dam: float = 0.0) -> None:
     """Save a full training checkpoint via torch.save().
 
     Parameters
@@ -190,7 +200,7 @@ def save_checkpoint(path: str, epoch: int, model, optimizer, scheduler,
         Optimizer whose state dict is saved.
     scheduler : optional
         Learning rate scheduler (may be ``None``).
-    best_miou, best_pixel_acc, best_dice : float
+    best_miou, best_pixel_acc, best_dice, best_f1_dam : float
         Best metrics observed so far.
     args : argparse.Namespace
         Training configuration.
@@ -203,6 +213,7 @@ def save_checkpoint(path: str, epoch: int, model, optimizer, scheduler,
         "best_miou": best_miou,
         "best_pixel_acc": best_pixel_acc,
         "best_dice": best_dice,
+        "best_f1_dam": best_f1_dam,
         "config": {
             "dataset": args.dataset,
             "num_clients": args.num_clients,
@@ -292,6 +303,36 @@ def build_pooled_dataset(dataset_name, num_clients, is_train, few_shot=0):
 # Evaluation
 # ──────────────────────────────────────────────────────────────────────
 
+def compute_f1_dam(confusion, damage_classes, eps=1e-8):
+    """F1-dam: harmonic mean of per-class F1 across the damage severity
+    classes (i.e. every class except background/no-damage), following the
+    xBD/xView2 challenge convention for damage-classification F1. Harmonic
+    mean (rather than a plain average) means F1-dam is dragged down hard by
+    any single damage class the model is failing on -- it can't be
+    inflated by one strong class hiding a dead one.
+
+    Computed directly from the confusion matrix (rows=true, cols=pred),
+    independent of whatever utils.segmentation_metrics.segmentation_metrics
+    returns, so it doesn't depend on that module's internals.
+    """
+    cm = confusion.float()
+    per_class_f1 = []
+    for c in damage_classes:
+        tp = cm[c, c]
+        fp = cm[:, c].sum() - tp
+        fn = cm[c, :].sum() - tp
+        precision = tp / (tp + fp + eps)
+        recall = tp / (tp + fn + eps)
+        f1 = 2 * precision * recall / (precision + recall + eps)
+        per_class_f1.append(f1.item())
+
+    # harmonic mean, guarding against any exact-zero class killing the whole
+    # metric via division by zero (clamped to eps instead)
+    safe_f1s = [max(f, eps) for f in per_class_f1]
+    f1_dam = len(safe_f1s) / sum(1.0 / f for f in safe_f1s)
+    return f1_dam, per_class_f1
+
+
 def evaluate(model, loader, num_classes, device):
     model.eval()
     confusion = torch.zeros(num_classes, num_classes, dtype=torch.int64)
@@ -303,6 +344,12 @@ def evaluate(model, loader, num_classes, device):
             pred = torch.argmax(output, dim=1)
             confusion += segmentation_confusion_matrix(pred, y, num_classes)
     metrics = segmentation_metrics(confusion)
+
+    damage_classes = tuple(range(1, num_classes))  # every class except 0 (background)
+    f1_dam, f1_dam_per_class = compute_f1_dam(confusion, damage_classes)
+    metrics["f1_dam"] = f1_dam
+    metrics["f1_dam_per_class"] = f1_dam_per_class
+
     return metrics
 
 
@@ -349,9 +396,32 @@ def resolve_args():
                      help="Weight of the focal term in the hybrid loss (default 0.5, "
                           "or config.yaml's focal_weight if set)")
     ap.add_argument("--lr_schedule", type=str, default=None,
-                     choices=["none", "cosine"],
-                     help="Learning rate schedule. 'cosine' decays lr to ~0 over "
-                          "--epochs, useful once training plateaus with a constant lr.")
+                     choices=["none", "cosine", "step", "cosine_warm_restarts", "plateau"],
+                     help="Learning rate schedule. 'cosine' decays lr to ~0 over --epochs. "
+                          "'step' drops lr by --lr_gamma every --lr_step_size epochs. "
+                          "'cosine_warm_restarts' (SGDR) cosine-decays then periodically "
+                          "resets lr back up every --lr_t0 epochs (x--lr_tmult each cycle) "
+                          "-- useful if plateaus are local optima rather than genuine "
+                          "convergence. 'plateau' (ReduceLROnPlateau) only decays lr when "
+                          "--lr_plateau_metric stops improving for --lr_plateau_patience "
+                          "evaluated epochs, reacting to the actual training curve instead "
+                          "of a fixed schedule.")
+    ap.add_argument("--lr_step_size", type=int, default=None,
+                     help="Epochs between decays for --lr_schedule step (default 30)")
+    ap.add_argument("--lr_gamma", type=float, default=None,
+                     help="Decay factor for --lr_schedule step (default 0.1)")
+    ap.add_argument("--lr_t0", type=int, default=None,
+                     help="Epochs until first restart for --lr_schedule cosine_warm_restarts (default 20)")
+    ap.add_argument("--lr_tmult", type=int, default=None,
+                     help="Multiplier on restart period after each restart, cosine_warm_restarts (default 2)")
+    ap.add_argument("--lr_plateau_patience", type=int, default=None,
+                     help="Evaluated epochs with no improvement before decaying, --lr_schedule plateau (default 10)")
+    ap.add_argument("--lr_plateau_factor", type=float, default=None,
+                     help="Decay factor for --lr_schedule plateau (default 0.5)")
+    ap.add_argument("--lr_plateau_metric", type=str, default=None,
+                     choices=["miou", "dice", "f1_dam"],
+                     help="Metric ReduceLROnPlateau monitors (default: miou, matching "
+                          "the best_miou improvement tracker used elsewhere)")
     ap.add_argument("--momentum", type=float, default=None,
                      help="SGD momentum (default 0.9, or config.yaml's momentum if set). "
                           "Plain SGD defaults to momentum=0, which makes it easy for a rare "
@@ -377,6 +447,20 @@ def resolve_args():
         args.focal_weight = yaml_config.get("focal_weight", 0.5)
     if args.lr_schedule is None:
         args.lr_schedule = yaml_config.get("lr_schedule", "none")
+    if args.lr_step_size is None:
+        args.lr_step_size = yaml_config.get("lr_step_size", 30)
+    if args.lr_gamma is None:
+        args.lr_gamma = yaml_config.get("lr_gamma", 0.1)
+    if args.lr_t0 is None:
+        args.lr_t0 = yaml_config.get("lr_t0", 20)
+    if args.lr_tmult is None:
+        args.lr_tmult = yaml_config.get("lr_tmult", 2)
+    if args.lr_plateau_patience is None:
+        args.lr_plateau_patience = yaml_config.get("lr_plateau_patience", 10)
+    if args.lr_plateau_factor is None:
+        args.lr_plateau_factor = yaml_config.get("lr_plateau_factor", 0.5)
+    if args.lr_plateau_metric is None:
+        args.lr_plateau_metric = yaml_config.get("lr_plateau_metric", "miou")
     if args.momentum is None:
         args.momentum = yaml_config.get("momentum", 0.9)
 
@@ -485,14 +569,83 @@ def main():
     )
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
+    # ── Resume (part 1: model + optimizer) ──────────────────────────────
+    # Done BEFORE the scheduler is constructed so we know the real
+    # start_epoch first -- otherwise a cosine schedule restarts its decay
+    # curve from epoch 0 on every resume instead of picking up where it
+    # left off, under-annealing the LR by the true final epoch.
+    start_epoch = 0
+    best_miou = 0.0
+    best_pixel_acc = 0.0
+    best_dice = 0.0
+    best_f1_dam = 0.0
+    checkpoint = None
+
+    if args.resume:
+        checkpoint = load_checkpoint(
+            args.resume, model, optimizer, scheduler=None, device=device,
+            current_lr=args.lr, current_momentum=args.momentum,
+        )
+        start_epoch = checkpoint["epoch"] + 1
+        best_miou = checkpoint.get("best_miou", 0.0)
+        best_pixel_acc = checkpoint.get("best_pixel_acc", 0.0)
+        best_dice = checkpoint.get("best_dice", 0.0)
+        best_f1_dam = checkpoint.get("best_f1_dam", 0.0)  # 0.0 for old checkpoints saved before this metric existed
+
+    # ── LR Scheduler ─────────────────────────────────────────────────
+    # last_epoch=start_epoch-1 syncs a fresh curve to the real epoch count
+    # on resume, for every schedule type that supports last_epoch. If the
+    # checkpoint has its own saved scheduler state, that's authoritative
+    # and overrides this guess -- except for 'plateau', which has no
+    # last_epoch concept at all (see note below).
     scheduler = None
+    is_plateau_scheduler = False
     if args.lr_schedule == "cosine":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=args.epochs,
+            optimizer, T_max=args.epochs, last_epoch=start_epoch - 1,
         )
-        # NOTE: if --resume is used below, load_checkpoint() will restore this
-        # scheduler's internal state (including last_epoch) from the checkpoint,
-        # so it picks the cosine curve back up at the right point automatically.
+    elif args.lr_schedule == "step":
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=args.lr_step_size, gamma=args.lr_gamma,
+            last_epoch=start_epoch - 1,
+        )
+    elif args.lr_schedule == "cosine_warm_restarts":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=args.lr_t0, T_mult=args.lr_tmult,
+            last_epoch=start_epoch - 1,
+        )
+    elif args.lr_schedule == "plateau":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", factor=args.lr_plateau_factor,
+            patience=args.lr_plateau_patience,
+        )
+        is_plateau_scheduler = True
+        # ReduceLROnPlateau has no last_epoch / step-count concept -- its
+        # state is just "how many evaluated epochs since last improvement".
+        # On resume without saved scheduler state, it starts monitoring for
+        # a fresh plateau from here rather than replaying history. That's a
+        # real (if minor) behavior gap vs the other schedules -- flagged in
+        # print_resume_info below rather than silently accepted.
+
+    if scheduler is not None and checkpoint is not None and checkpoint.get("scheduler_state_dict") is not None:
+        try:
+            scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        except Exception:
+            # Most likely args.lr_schedule differs from what the checkpoint
+            # was trained with (e.g. resuming a 'cosine' run as 'plateau').
+            # Keep the freshly constructed scheduler rather than crashing.
+            print(f"  WARNING: could not load saved scheduler state (schedule type "
+                  f"may have changed since this checkpoint was saved) -- "
+                  f"starting '{args.lr_schedule}' fresh from epoch {start_epoch}.")
+
+    if args.resume:
+        print_resume_info(args.resume, start_epoch, best_miou, best_pixel_acc, best_dice, best_f1_dam)
+        if args.lr_schedule in ("cosine", "step", "cosine_warm_restarts"):
+            print(f"  {args.lr_schedule} schedule synced to epoch {start_epoch}/{args.epochs} "
+                  f"(lr={optimizer.param_groups[0]['lr']:.6f})")
+        elif args.lr_schedule == "plateau":
+            print(f"  plateau schedule resumed -- monitoring '{args.lr_plateau_metric}' "
+                  f"fresh from epoch {start_epoch} (no plateau history carried over)")
 
     # ── Training Config ───────────────────────────────────────────────
     print_training_config(args, device, run_name, result_path)
@@ -503,34 +656,19 @@ def main():
         class_fieldnames.append(f"dice_class_{c}")
     for c in range(args.num_classes):
         class_fieldnames.append(f"iou_class_{c}")
+    for c in range(1, args.num_classes):
+        class_fieldnames.append(f"f1_dam_class_{c}")
 
     epoch_csv_path = os.path.join(result_path, f"{run_name}_epochs.csv")
     epoch_logger = CSVLogger(
         epoch_csv_path,
         fieldnames=[
             "epoch", "evaluated", "train_loss",
-            "pixel_acc", "dice", "miou",
+            "pixel_acc", "dice", "miou", "f1_dam",
         ] + class_fieldnames + [
             "epoch_time_sec",
         ],
     )
-
-    # ── Resume ────────────────────────────────────────────────────────
-    start_epoch = 0
-    best_miou = 0.0
-    best_pixel_acc = 0.0
-    best_dice = 0.0
-
-    if args.resume:
-        checkpoint = load_checkpoint(
-            args.resume, model, optimizer, scheduler, device,
-            current_lr=args.lr, current_momentum=args.momentum,
-        )
-        start_epoch = checkpoint["epoch"] + 1
-        best_miou = checkpoint.get("best_miou", 0.0)
-        best_pixel_acc = checkpoint.get("best_pixel_acc", 0.0)
-        best_dice = checkpoint.get("best_dice", 0.0)
-        print_resume_info(args.resume, start_epoch, best_miou, best_pixel_acc, best_dice)
 
     # ── Training Loop ─────────────────────────────────────────────────
     print_section("Training")
@@ -555,7 +693,7 @@ def main():
         # ── Train one epoch ───────────────────────────────────────────
         avg_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
 
-        if scheduler is not None:
+        if scheduler is not None and not is_plateau_scheduler:
             scheduler.step()
 
         epoch_time = time.time() - epoch_start
@@ -577,38 +715,48 @@ def main():
             miou = epoch_metrics["mean_iou"]
             dice_per_class = epoch_metrics["dice_per_class"]
             iou_per_class = epoch_metrics["iou"]
+            f1_dam = epoch_metrics["f1_dam"]
+            f1_dam_per_class = epoch_metrics["f1_dam_per_class"]
+
+            if scheduler is not None and is_plateau_scheduler:
+                monitor_value = {"miou": miou, "dice": dice, "f1_dam": f1_dam}[args.lr_plateau_metric]
+                scheduler.step(monitor_value)
 
             improved = miou > best_miou
             best_miou = max(best_miou, miou)
             best_pixel_acc = max(best_pixel_acc, pixel_acc)
             best_dice = max(best_dice, dice)
+            best_f1_dam = max(best_f1_dam, f1_dam)
 
             row.update({
                 "evaluated": 1,
                 "pixel_acc": pixel_acc,
                 "dice": dice,
                 "miou": miou,
+                "f1_dam": f1_dam,
             })
             for c in range(args.num_classes):
                 row[f"dice_class_{c}"] = float(dice_per_class[c])
                 row[f"iou_class_{c}"] = float(iou_per_class[c])
+            for i, c in enumerate(range(1, args.num_classes)):
+                row[f"f1_dam_class_{c}"] = float(f1_dam_per_class[i])
 
             # ── Save best model ───────────────────────────────────────
             if improved:
                 best_model_path = os.path.join(result_path, "best_model.pt")
                 save_checkpoint(
                     best_model_path, epoch, model, optimizer, scheduler,
-                    best_miou, best_pixel_acc, best_dice, args,
+                    best_miou, best_pixel_acc, best_dice, args, best_f1_dam,
                 )
 
-        # ── CSV logging (unchanged schema) ────────────────────────────
+        # ── CSV logging ────────────────────────────────────────────────
         epoch_logger.log(row)
 
         # ── Save last model ───────────────────────────────────────────
         last_model_path = os.path.join(result_path, "last_model.pt")
         save_checkpoint(
             last_model_path, epoch, model, optimizer, scheduler,
-            best_miou, best_pixel_acc, best_dice, args,
+            best_miou, best_pixel_acc, best_dice, args, best_f1_dam,
         )
 
         # ── Periodic checkpoint ───────────────────────────────────────
@@ -618,7 +766,7 @@ def main():
             ckpt_path = os.path.join(checkpoint_dir, f"epoch_{epoch_1indexed:03d}.pt")
             save_checkpoint(
                 ckpt_path, epoch, model, optimizer, scheduler,
-                best_miou, best_pixel_acc, best_dice, args,
+                best_miou, best_pixel_acc, best_dice, args, best_f1_dam,
             )
 
         # ── ETA computation ───────────────────────────────────────────
@@ -642,8 +790,9 @@ def main():
 
     # ── Final model save (backward compat) ────────────────────────────
     print_section("Training Complete")
-    print(f"  Best mIoU : {best_miou:.4f}")
-    print(f"  Total time: {format_time(time.time() - training_start)}")
+    print(f"  Best mIoU  : {best_miou:.4f}")
+    print(f"  Best F1-dam: {best_f1_dam:.4f}")
+    print(f"  Total time : {format_time(time.time() - training_start)}")
 
     model_path = os.path.join(result_path, f"{run_name}_model.pt")
     torch.save(model.state_dict(), model_path)
@@ -664,7 +813,7 @@ def main():
             "run_name", "run_id", "timestamp", "dataset", "algorithm",
             "protocol", "held_out_idx", "num_clients", "num_classes",
             "global_rounds_configured", "global_rounds_completed",
-            "best_pixel_acc", "best_dice", "best_miou",
+            "best_pixel_acc", "best_dice", "best_miou", "best_f1_dam",
             "avg_round_time_sec", "total_time_sec",
         ],
     )
@@ -684,6 +833,7 @@ def main():
         "best_pixel_acc": best_pixel_acc,
         "best_dice": best_dice,
         "best_miou": best_miou,
+        "best_f1_dam": best_f1_dam,
         "avg_round_time_sec": avg_epoch_time,
         "total_time_sec": sum(epoch_times),
     })
