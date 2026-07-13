@@ -62,7 +62,15 @@ DEFAULTS = {
 
 NUM_WORKERS = 8
 BANNER_WIDTH = 58
-
+DISASTER_NAMES = [
+    "Earthquake",
+    "Flood",
+    "Hurricane",
+    "Tornado",
+    "Tsunami",
+    "Volcano",
+    "Wildfire",
+]
 
 # ──────────────────────────────────────────────────────────────────────
 # Display helpers
@@ -291,14 +299,73 @@ def build_model(num_classes, device):
     return model
 
 
-def build_pooled_dataset(dataset_name, num_clients, is_train, few_shot=0):
-    """Concatenate every client's cached Dataset into one big Dataset."""
-    per_client = []
-    for cid in range(num_clients):
-        ds = read_client_data(dataset_name, cid, is_train=is_train, few_shot=few_shot)
-        per_client.append(ds)
-    return ConcatDataset(per_client)
+def build_pooled_dataset(
+    dataset_name,
+    num_clients,
+    is_train,
+    few_shot=0,
+    held_out_idx=None,
+):
+    """
+    Build a pooled dataset.
 
+    held_out_idx=None:
+        Original behavior (all clients pooled)
+
+    held_out_idx=k:
+        LODO
+        - Train: all clients except k
+        - Test : only client k
+    """
+
+    per_client = []
+
+    # Original centralized behaviour
+    if held_out_idx is None:
+        for cid in range(num_clients):
+            ds = read_client_data(
+                dataset_name,
+                cid,
+                is_train=is_train,
+                few_shot=few_shot,
+            )
+            per_client.append(ds)
+
+    # LODO behaviour
+    else:
+
+        if is_train:
+
+            print(f"LODO Train: excluding client {held_out_idx}")
+
+            for cid in range(num_clients):
+
+                if cid == held_out_idx:
+                    continue
+
+                ds = read_client_data(
+                    dataset_name,
+                    cid,
+                    is_train=True,
+                    few_shot=few_shot,
+                )
+
+                per_client.append(ds)
+
+        else:
+
+            print(f"LODO Test: client {held_out_idx}")
+
+            ds = read_client_data(
+                dataset_name,
+                held_out_idx,
+                is_train=False,
+                few_shot=few_shot,
+            )
+
+            per_client.append(ds)
+
+    return ConcatDataset(per_client)
 
 # ──────────────────────────────────────────────────────────────────────
 # Evaluation
@@ -418,6 +485,13 @@ def resolve_args():
     ap.add_argument("--dataset", type=str, default=None)
     ap.add_argument("--num_clients", type=int, default=None,
                      help="How many client shards to pool together")
+    ap.add_argument(
+        "--held_out_idx",
+        type=int,
+        default=None,
+        help="LODO: hold out this client/disaster for testing. "
+            "Default=None pools all clients (original centralized behaviour)."
+    )
     ap.add_argument("--num_classes", type=int, default=None)
     ap.add_argument("--batch_size", type=int, default=None)
     ap.add_argument("--epochs", type=int, default=None)
@@ -476,6 +550,15 @@ def resolve_args():
                           "output channel's bias to get pushed very negative early on and "
                           "never recover -- momentum helps the optimizer escape that.")
     args = ap.parse_args()
+    if args.held_out_idx is None:
+        print("\n" + "=" * 60)
+        print("Evaluation Protocol : Centralized (All Disaster Types)")
+        print("=" * 60)
+    else:
+        print("\n" + "=" * 60)
+        print("Evaluation Protocol : Leave-One-Disaster-Type-Out (LODO)")
+        print(f"Held-out Disaster : {DISASTER_NAMES[args.held_out_idx]}")
+        print("=" * 60)
 
     yaml_config = {}
     if args.config:
@@ -575,10 +658,25 @@ def main():
     device = args.device if torch.cuda.is_available() else "cpu"
 
     run_id = make_run_id()
-    run_name = f"Centralized_{args.dataset}_gr{args.epochs}_{run_id}"
+
+    if args.held_out_idx is None:
+        run_name = f"Centralized_{args.dataset}_ALL_gr{args.epochs}_{run_id}"
+    else:
+        disaster = DISASTER_NAMES[args.held_out_idx].replace(" ", "_")
+        run_name = (
+            f"Centralized_LODO_{disaster}_"
+            f"gr{args.epochs}_{run_id}"
+        )
+
+        # Automatically create a separate folder for each LODO fold
+        args.output_dir = os.path.join(
+            "centralized_lodo",
+            f"fold{args.held_out_idx}_{disaster.lower()}"
+        )
 
     result_path = os.path.join("results", args.output_dir)
     checkpoint_dir = os.path.join(result_path, "checkpoints")
+
     os.makedirs(result_path, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
 
@@ -590,10 +688,12 @@ def main():
         args.dataset,
         args.num_clients,
         is_train=True,
+        held_out_idx=args.held_out_idx,
+
     )
 
     print(f"Original training tiles: {len(train_ds)}")
-    test_ds = build_pooled_dataset(args.dataset, args.num_clients, is_train=False)
+    test_ds = build_pooled_dataset(args.dataset, args.num_clients, is_train=False,  held_out_idx=args.held_out_idx,)
     print("Building weighted sampler...")
 
     weights = []

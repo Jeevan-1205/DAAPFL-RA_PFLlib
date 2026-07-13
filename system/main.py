@@ -536,6 +536,45 @@ if __name__ == "__main__":
     default=None,
     help="Path to YAML experiment configuration"
     )
+    parser.add_argument("--class_weights", type=float, nargs="+", default=None)
+
+    parser.add_argument("--dice_weight", type=float, default=0.7)
+
+    parser.add_argument("--focal_weight", type=float, default=0.3)
+
+    parser.add_argument(
+        "--lr_schedule",
+        type=str,
+        default="cosine_warm_restarts",
+        choices=[
+            "none",
+            "cosine",
+            "step",
+            "cosine_warm_restarts",
+            "plateau",
+        ],
+    )
+
+    parser.add_argument("--lr_step_size", type=int, default=30)
+
+    parser.add_argument("--lr_gamma", type=float, default=0.1)
+
+    parser.add_argument("--lr_t0", type=int, default=6)
+
+    parser.add_argument("--lr_tmult", type=int, default=2)
+
+    parser.add_argument("--lr_plateau_patience", type=int, default=10)
+
+    parser.add_argument("--lr_plateau_factor", type=float, default=0.5)
+
+    parser.add_argument(
+        "--lr_plateau_metric",
+        type=str,
+        default="miou",
+        choices=["miou", "dice", "f1_dam"],
+    )
+
+    
 
     args = parser.parse_args()
 

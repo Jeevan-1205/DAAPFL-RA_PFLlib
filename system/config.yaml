@@ -23,7 +23,7 @@ global_rounds: 200       # bumped from the round-1 smoke test to a real run
 batch_size: 8
 local_learning_rate: 0.0001
 
-output_dir: hp_search  # groups all fold results + summary.csv under results/<output_dir>/
+output_dir: centralized  # groups all fold results + summary.csv under results/<output_dir>/
 
 # Per-class focal-loss weights (alpha), in class-index order 0..num_classes-1.
 # Leave as null until you run scripts/compute_class_weights.py against your
@@ -43,9 +43,14 @@ class_weights: [0.0787, 0.4698, 1.3944, 1.3535, 1.7037]   # e.g. [0.21, 1.85, 3.
 # recall is landing mostly on a neighboring class rather than class 0,
 # raising its weight alone won't fix it.
  
-dice_weight: 0.7    # was 0.5 -- dice already balances per-class fairly, focal doesn't
-focal_weight: 0.3   # was 0.5
+dice_weight: 0.7   # was 0.5 -- dice already balances per-class fairly, focal doesn't
+focal_weight: 0.3 # was 0.5
  
-lr_schedule: cosine   # decays lr to ~0 over `global_rounds` epochs -- the last run's
-                       # loss/mIoU plateaued hard after ~epoch 100 at a constant lr
+
 damage_sampling_weight: 2.0  # weight for tiles with damage in the WeightedRandomSampler
+
+
+lr_schedule: cosine_warm_restarts
+
+lr_t0: 6
+lr_tmult: 2

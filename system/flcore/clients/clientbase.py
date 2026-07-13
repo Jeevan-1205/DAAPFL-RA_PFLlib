@@ -1,6 +1,8 @@
 import copy
 import torch
 import torch.nn as nn
+from losses import build_loss
+from torch.utils.data import WeightedRandomSampler
 import numpy as np
 import os
 from torch.utils.data import DataLoader
@@ -16,6 +18,7 @@ class Client(object):
 
     def __init__(self, args, id, train_samples, test_samples, **kwargs):
         torch.manual_seed(0)
+        self.args = args
         self.model = copy.deepcopy(args.model)
         self.algorithm = args.algorithm
         self.dataset = args.dataset
@@ -43,19 +46,106 @@ class Client(object):
         self.train_time_cost = {'num_rounds': 0, 'total_cost': 0.0}
         self.send_time_cost = {'num_rounds': 0, 'total_cost': 0.0}
 
-        self.loss = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
-        self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=self.optimizer, 
-            gamma=args.learning_rate_decay_gamma
+        self.loss = build_loss(
+            name="dice_focal",
+            num_classes=args.num_classes,
+            alpha=args.class_weights,
+            dice_weight=args.dice_weight,
+            focal_weight=args.focal_weight,
         )
+        self.optimizer = torch.optim.SGD(
+            self.model.parameters(),
+            lr=self.learning_rate,
+            momentum=args.momentum,
+        )
+        self.learning_rate_scheduler = None
+
+        if args.lr_schedule == "cosine":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=args.global_rounds,
+            )
+
+        elif args.lr_schedule == "step":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer,
+                step_size=args.lr_step_size,
+                gamma=args.lr_gamma,
+            )
+
+        elif args.lr_schedule == "cosine_warm_restarts":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=args.lr_t0,
+                T_mult=args.lr_tmult,
+            )
+
+        elif args.lr_schedule == "plateau":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                mode="max",
+                factor=args.lr_plateau_factor,
+                patience=args.lr_plateau_patience,
+            )
         self.learning_rate_decay = args.learning_rate_decay
 
 
     def load_train_data(self, batch_size=None):
-        if batch_size == None:
+        if batch_size is None:
             batch_size = self.batch_size
-        train_data = read_client_data(self.dataset, self.id, is_train=True, few_shot=self.few_shot)
+
+        train_data = read_client_data(
+            self.dataset,
+            self.id,
+            is_train=True,
+            few_shot=self.few_shot,
+        )
+
+        # Only use weighted sampling for xBD datasets that support has_damage()
+        if hasattr(train_data, "has_damage"):
+
+            weights = []
+
+            damage_tiles = 0
+            background_tiles = 0
+
+            for i in range(len(train_data)):
+                if train_data.has_damage(i):
+                    damage_tiles += 1
+                    weights.append(2.0)      # oversample damage
+                else:
+                    background_tiles += 1
+                    weights.append(1.0)
+
+            print(
+                f"Client {self.id}: "
+                f"{damage_tiles} damage / "
+                f"{background_tiles} background tiles"
+            )
+
+            sampler = WeightedRandomSampler(
+                weights,
+                num_samples=len(train_data),
+                replacement=True,
+            )
+
+            return DataLoader(
+                train_data,
+                batch_size=batch_size,
+                sampler=sampler,
+                shuffle=False,
+                drop_last=True,
+                num_workers=8,
+                pin_memory=True,
+                persistent_workers=True,
+                prefetch_factor=2,
+            )
+
+        # Default loader for non-segmentation datasets
         return DataLoader(
             train_data,
             batch_size=batch_size,
@@ -64,9 +154,8 @@ class Client(object):
             num_workers=8,
             pin_memory=True,
             persistent_workers=True,
-            prefetch_factor=2
+            prefetch_factor=2,
         )
-
     def load_test_data(self, batch_size=None):
         if batch_size == None:
             batch_size = self.batch_size
