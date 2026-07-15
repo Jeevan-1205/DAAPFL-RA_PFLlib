@@ -14,7 +14,7 @@ class clientAVG(Client):
         trainloader = self.load_train_data()
         # self.model.to(self.device)
         self.model.train()
-        first_weight_before = next(self.model.parameters()).detach().clone()
+        
         
         start_time = time.time()
 
@@ -48,11 +48,14 @@ class clientAVG(Client):
 
                 forward_start = time.time()
 
-                self.optimizer.zero_grad()
+                output = self.model(x)
+                loss = self.loss(output, y)
 
-                with autocast(enabled=self.device == "cuda"):
-                    output = self.model(x)
-                    loss = self.loss(output, y)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+
+               
 
                 if self.device == "cuda":
                     torch.cuda.synchronize()
@@ -61,9 +64,7 @@ class clientAVG(Client):
 
                 backward_start = time.time()
 
-                self.scaler.scale(loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+               
 
                 
                 backward_time = time.time() - backward_start
@@ -88,12 +89,11 @@ class clientAVG(Client):
                     pass
                 else:
                     self.learning_rate_scheduler.step()
-        first_weight_after = next(self.model.parameters()).detach()
+        
 
-        delta = torch.norm(first_weight_after - first_weight_before).item()
+        
 
-        print(f"[Client {self.id}] Weight update norm = {delta:.6f}")
-
+        
         self.train_time_cost['num_rounds'] += 1
         self.train_time_cost['total_cost'] += time.time() - start_time
 

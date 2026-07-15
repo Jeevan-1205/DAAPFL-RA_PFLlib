@@ -58,9 +58,7 @@ class Client(object):
             lr=self.learning_rate,
             momentum=args.momentum,
         )
-        print(f"[Client {self.id}] "
-                f"LR={self.optimizer.param_groups[0]['lr']:.6f} "
-                f"Momentum={self.optimizer.param_groups[0]['momentum']}")
+        
 
         self.learning_rate_scheduler = None
 

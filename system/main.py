@@ -391,9 +391,10 @@ def run(args):
     # Skip for segmentation/LODO runs: ServerSegmentation saves results using
     # its own fold*.h5 naming convention, not the generic dataset_algo_goal_times.h5
     # pattern average_data() expects.
-    if not (args.dataset == "xBD" and args.protocol == "lodo"):
-        average_data(dataset=args.dataset, algorithm=args.algorithm, goal=args.goal, times=args.times)
-
+    # if not (args.dataset == "xBD" and args.protocol == "lodo"):
+    #     average_data(dataset=args.dataset, algorithm=args.algorithm, goal=args.goal, times=args.times)
+    # if os.path.exists(server.summary_csv_path):
+    print(f"Summary saved to {server.summary_csv_path}")
     print("All done!")
 
    # reporter.report()

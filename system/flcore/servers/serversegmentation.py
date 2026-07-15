@@ -216,8 +216,13 @@ class ServerSegmentation(Server):
         print(f"Best Dice: {max(self.rs_test_dice):.4f}")
         print(f"Best mIoU: {max(self.rs_test_miou):.4f}")
         print(f"Best F1-dam: {max(self.rs_test_f1_dam):.4f}")
+        if self.Budget:
+            avg_round_time = sum(self.Budget) / len(self.Budget)
+        else:
+            avg_round_time = 0.0
+
         print("\nAverage time cost per round.")
-        print(sum(self.Budget[1:])/len(self.Budget[1:]))
+        print(avg_round_time)
 
         self.save_results()
         self.save_global_model()
@@ -386,7 +391,6 @@ class ServerSegmentation(Server):
             else:
                 avg_round_time = 0.0
 
-            print(avg_round_time)
             summary_logger.log({
                 "run_name": run_name,
                 "run_id": self.run_id,
