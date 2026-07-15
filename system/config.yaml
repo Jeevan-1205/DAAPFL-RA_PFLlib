@@ -16,14 +16,15 @@ model: SiameseUNet
 num_classes: 5
 num_clients: 7
 
-protocol: lodo          # "lodo" or "standard"
-held_out_idx: 0         # which client is held out (0-6), only used when protocol: lodo
+protocol: standard          # "lodo" or "standard"
+held_out_idx: null         # which client is held out (0-6), only used when protocol: lodo
 
 global_rounds: 200       # bumped from the round-1 smoke test to a real run
 batch_size: 8
 local_learning_rate: 0.0001
+momentum: 0.9
 
-output_dir: centralized  # groups all fold results + summary.csv under results/<output_dir>/
+output_dir: fedavg  # groups all fold results + summary.csv under results/<output_dir>/
 
 # Per-class focal-loss weights (alpha), in class-index order 0..num_classes-1.
 # Leave as null until you run scripts/compute_class_weights.py against your

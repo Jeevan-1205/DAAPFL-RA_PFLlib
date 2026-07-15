@@ -1,9 +1,9 @@
 import os
 import time
-import h5py
 import numpy as np
 import torch
 import yaml
+from tqdm import tqdm
 from datetime import datetime
 from flcore.clients.clientsegmentation import clientSegmentation
 from flcore.servers.serverbase import Server
@@ -43,6 +43,7 @@ class ServerSegmentation(Server):
         self.rs_test_dice_per_class = []
         self.rs_test_iou = []
         self.rs_test_miou = []
+        self.rs_test_f1_dam = []
 
         # CSV logging
         self.run_id = make_run_id()
@@ -106,7 +107,7 @@ class ServerSegmentation(Server):
             round_csv_path,
             fieldnames=[
                 "round", "held_out_idx", "evaluated",
-                "pixel_acc", "dice", "miou", "iou_mean",
+                "pixel_acc", "dice", "miou", "iou_mean","f1_dam",
                 "std_pixel_acc", "std_miou", "train_loss",
                 "round_time_sec",
             ],
@@ -117,41 +118,85 @@ class ServerSegmentation(Server):
         result_path = self._get_result_path()
         self._init_round_logger(result_path)
 
-        for i in range(self.global_rounds+1):
+        print("\n" + "═"*60)
+        print("              FedAvg Training")
+        print("═"*60)
+        print(f"Algorithm      : {self.algorithm}")
+        print(f"Dataset        : {self.dataset}")
+        print(f"Protocol       : {self.protocol}")
+        print(f"Clients        : {self.num_clients}")
+        print(f"Global Rounds  : {self.global_rounds}")
+        print(f"Local Epochs   : {self.local_epochs}")
+        print(f"Join Ratio     : {self.join_ratio}")
+        print("═"*60 + "\n")
+
+        print("\n============= Initial Global Model =============")
+
+        self.send_models()
+
+        self.evaluate()
+        
+        print("="*60)
+
+
+
+        round_bar = tqdm(
+            range(self.global_rounds),
+            desc=f"{self.algorithm} ({self.protocol})",
+            unit="round",
+            ncols=120,
+        )
+
+        for i in round_bar:
+            evaluated_this_round = False
+
             s_t = time.time()
+
             self.selected_clients = self.select_clients()
+
+            # Send latest global model
             self.send_models()
 
-            evaluated_this_round = False
-            if i%self.eval_gap == 0:
-                print(f"\n-------------Round number: {i}-------------")
-                print("\nEvaluate global model")
-                self.evaluate()
-                evaluated_this_round = True
-
-            print("Evaluation completed")
-
-            print("Starting local training")
-
             for client in self.selected_clients:
-                print(f"Training client {client.id}")
                 client.train()
 
-            print("Finished local training")
-            print("Receiving models")
+
             self.receive_models()
 
-            print("Aggregating")
+            if self.dlg_eval and i % self.dlg_gap == 0:
+                self.call_dlg(i)
+
             self.aggregate_parameters()
 
-            print("Aggregation finished")
+            # Broadcast aggregated model before evaluation
+            self.send_models()
 
-            self.Budget.append(time.time() - s_t)
-            print('-'*25, 'time cost', '-'*25, self.Budget[-1])
+            if i % self.eval_gap == 0:
+                evaluated_this_round = True
+                print(f"\n-------------Round number: {i+1}-------------")
+                print("\nEvaluate global model")
+                self.evaluate()
+                self.Budget.append(time.time() - s_t)
+                best_dice = max(self.rs_test_dice)
+                best_miou = max(self.rs_test_miou)
+
+                avg_time = sum(self.Budget) / len(self.Budget) if self.Budget else 0
+                remaining = avg_time * (self.global_rounds - i - 1)
+
+                round_bar.set_postfix(
+                    Dice=f"{self.rs_test_dice[-1]:.4f}",
+                    mIoU=f"{self.rs_test_miou[-1]:.4f}",
+                    F1=f"{self.rs_test_f1_dam[-1]:.4f}",
+                    BestDice=f"{best_dice:.4f}",
+                    BestmIoU=f"{best_miou:.4f}",
+                    ETA=f"{remaining/3600:.1f}h",
+                )
+
+            
 
             # -------- per-round CSV row --------
             round_row = {
-                "round": i,
+                "round": i+1,
                 "held_out_idx": getattr(self, "held_out_idx", ""),
                 "evaluated": int(evaluated_this_round),
                 "round_time_sec": self.Budget[-1],
@@ -170,6 +215,7 @@ class ServerSegmentation(Server):
         print(f"Best Pixel Accuracy: {max(self.rs_test_pixel_acc):.4f}")
         print(f"Best Dice: {max(self.rs_test_dice):.4f}")
         print(f"Best mIoU: {max(self.rs_test_miou):.4f}")
+        print(f"Best F1-dam: {max(self.rs_test_f1_dam):.4f}")
         print("\nAverage time cost per round.")
         print(sum(self.Budget[1:])/len(self.Budget[1:]))
 
@@ -221,12 +267,21 @@ class ServerSegmentation(Server):
 
         global_confusion = self._sum_confusions(stats[2])
         metrics = segmentation_metrics(global_confusion)
+        print("\nConfusion Matrix:")
+        print(global_confusion.cpu().numpy())
+
+        print("\nPer-class F1:")
+        print(metrics["f1_per_class"])
+
+        print("F1-dam:", metrics["f1_dam"])
+
 
         pixel_acc = metrics["pixel_accuracy"]
         dice = metrics["dice"]
         dice_per_class = metrics["dice_per_class"]
         iou = metrics["iou"]
         miou = metrics["mean_iou"]
+        f1_dam = metrics["f1_dam"]
 
         train_loss = 0.0
         client_pixel_accs = []
@@ -243,6 +298,7 @@ class ServerSegmentation(Server):
             self.rs_test_dice_per_class.append(dice_per_class)
             self.rs_test_iou.append(iou)
             self.rs_test_miou.append(miou)
+            self.rs_test_f1_dam.append(f1_dam)
         else:
             acc.append(pixel_acc)
 
@@ -261,6 +317,7 @@ class ServerSegmentation(Server):
             "pixel_acc": pixel_acc,
             "dice": dice,
             "miou": miou,
+            "f1_dam": f1_dam,
             "iou_mean": iou_mean,
             "std_pixel_acc": float(np.std(client_pixel_accs)),
             "std_miou": float(np.std(client_mious)),
@@ -270,16 +327,24 @@ class ServerSegmentation(Server):
         print("Averaged Train Loss: {:.4f}".format(train_loss))
         print("Averaged Pixel Accuracy: {:.4f}".format(pixel_acc))
         print("Averaged Dice: {:.4f}".format(dice))
+        print("Averaged F1-dam: {:.4f}".format(f1_dam))
         print("Averaged Mean IoU: {:.4f}".format(miou))
         print("Std Pixel Accuracy: {:.4f}".format(np.std(client_pixel_accs)))
         print("Std Mean IoU: {:.4f}".format(np.std(client_mious)))
 
     def save_results(self):
+        import shutil
+        result_path = self._get_result_path()
+        run_name = self._get_run_name()
+
+        shutil.copy(
+            self.args.config,
+            os.path.join(result_path, "config.yaml")
+        )
         # --------------------------------------------------
         # Result directory
         # --------------------------------------------------
-        result_path = self._get_result_path()
-        run_name = self._get_run_name()
+        
 
         config_path = os.path.join(result_path, f"{run_name}_config.yaml")
 
@@ -299,42 +364,7 @@ class ServerSegmentation(Server):
         # --------------------------------------------------
         if len(self.rs_test_pixel_acc):
 
-            filename = f"{run_name}.h5"
-            file_path = os.path.join(result_path, filename)
-
-            print("Saving results to:", file_path)
-
-            with h5py.File(file_path, "w") as hf:
-                hf.create_dataset("rs_test_acc", data=self.rs_test_acc)
-                hf.create_dataset("rs_test_pixel_acc", data=self.rs_test_pixel_acc)
-                hf.create_dataset("rs_test_dice", data=self.rs_test_dice)
-
-                hf.create_dataset(
-                    "rs_test_dice_per_class",
-                    data=np.asarray(
-                        self.rs_test_dice_per_class,
-                        dtype=np.float64,
-                    ),
-                )
-
-                hf.create_dataset(
-                    "rs_test_iou",
-                    data=np.asarray(
-                        self.rs_test_iou,
-                        dtype=np.float64,
-                    ),
-                )
-
-                hf.create_dataset(
-                    "rs_test_miou",
-                    data=self.rs_test_miou,
-                )
-
-                hf.create_dataset(
-                    "rs_train_loss",
-                    data=self.rs_train_loss,
-                )
-
+            
             # --------------------------------------------------
             # Append a row to the run-wide summary CSV
             # --------------------------------------------------
@@ -345,15 +375,18 @@ class ServerSegmentation(Server):
                     "run_name", "run_id", "timestamp", "dataset", "algorithm",
                     "protocol", "held_out_idx", "num_clients", "num_classes",
                     "global_rounds_configured", "global_rounds_completed",
-                    "best_pixel_acc", "best_dice", "best_miou",
+                    "best_pixel_acc", "best_dice", "best_miou", "best_f1_dam",
                     "avg_round_time_sec", "total_time_sec",
                 ],
             )
-            avg_round_time = (
-                sum(self.Budget[1:]) / len(self.Budget[1:])
-                if len(self.Budget) > 1
-                else (self.Budget[0] if self.Budget else 0)
-            )
+            if len(self.Budget) > 1:
+                avg_round_time = sum(self.Budget[1:]) / len(self.Budget[1:])
+            elif len(self.Budget) == 1:
+                avg_round_time = self.Budget[0]
+            else:
+                avg_round_time = 0.0
+
+            print(avg_round_time)
             summary_logger.log({
                 "run_name": run_name,
                 "run_id": self.run_id,
@@ -369,6 +402,7 @@ class ServerSegmentation(Server):
                 "best_pixel_acc": max(self.rs_test_pixel_acc),
                 "best_dice": max(self.rs_test_dice),
                 "best_miou": max(self.rs_test_miou),
+                "best_f1_dam": max(self.rs_test_f1_dam),
                 "avg_round_time_sec": avg_round_time,
                 "total_time_sec": sum(self.Budget),
             })

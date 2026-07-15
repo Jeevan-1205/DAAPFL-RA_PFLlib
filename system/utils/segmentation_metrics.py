@@ -94,14 +94,56 @@ def mean_iou(confusion_matrix: torch.Tensor) -> float:
     return float(np.nanmean(scores))
 
 
+def compute_f1_dam(confusion, damage_classes, eps=1e-8):
+    """F1-dam: harmonic mean of per-class F1 across the damage severity
+    classes (i.e. every class except background/no-damage), following the
+    xBD/xView2 challenge convention for damage-classification F1. Harmonic
+    mean (rather than a plain average) means F1-dam is dragged down hard by
+    any single damage class the model is failing on -- it can't be
+    inflated by one strong class hiding a dead one.
+
+    Computed directly from the confusion matrix (rows=true, cols=pred),
+    independent of whatever utils.segmentation_metrics.segmentation_metrics
+    returns, so it doesn't depend on that module's internals.
+    """
+    cm = confusion.float()
+    per_class_f1 = []
+    for c in damage_classes:
+        tp = cm[c, c]
+        fp = cm[:, c].sum() - tp
+        fn = cm[c, :].sum() - tp
+        precision = tp / (tp + fp + eps)
+        recall = tp / (tp + fn + eps)
+        f1 = 2 * precision * recall / (precision + recall + eps)
+        per_class_f1.append(f1.item())
+
+    # harmonic mean, guarding against any exact-zero class killing the whole
+    # metric via division by zero (clamped to eps instead)
+    safe_f1s = [max(f, eps) for f in per_class_f1]
+    f1_dam = len(safe_f1s) / sum(1.0 / f for f in safe_f1s)
+    return f1_dam, per_class_f1
+
+
 def segmentation_metrics(confusion_matrix: torch.Tensor) -> Dict[str, object]:
-    """Compute Pixel Accuracy, Dice, IoU, and Mean IoU."""
+    """Compute Pixel Accuracy, Dice, IoU, Mean IoU and F1-dam."""
+
     dice_scores = dice_per_class(confusion_matrix)
     iou_scores = iou_per_class(confusion_matrix)
+
+    # Damage classes are everything except background (0)
+    damage_classes = list(range(1, confusion_matrix.shape[0]))
+
+    f1_dam, per_class_f1 = compute_f1_dam(
+        confusion_matrix,
+        damage_classes,
+    )
+
     return {
         "pixel_accuracy": pixel_accuracy(confusion_matrix),
         "dice": 0.0 if np.all(np.isnan(dice_scores)) else float(np.nanmean(dice_scores)),
         "dice_per_class": dice_scores,
         "iou": iou_scores,
         "mean_iou": 0.0 if np.all(np.isnan(iou_scores)) else float(np.nanmean(iou_scores)),
+        "f1_dam": f1_dam,
+        "f1_per_class": per_class_f1,
     }

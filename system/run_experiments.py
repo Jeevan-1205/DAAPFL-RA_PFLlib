@@ -14,7 +14,6 @@ DISASTERS = [
     "Wildfire",
 ]
 
-
 def run_command(cmd):
     print("\nRunning:")
     print(" ".join(cmd))
@@ -74,6 +73,17 @@ def main():
         print(f"Fold {fold}/6")
         print(f"Held-out Disaster : {disaster}")
         print("=" * 80)
+
+        summary_file = os.path.join(
+            "results",
+            "centralized_lodo",
+            f"fold{fold}_{disaster.lower()}",
+            "summary.csv",
+        )
+
+        if args.algorithm == "Centralized" and os.path.exists(summary_file):
+            print(f"✓ Fold {fold} ({disaster}) already completed. Skipping.")
+            continue
 
         start = time.time()
 

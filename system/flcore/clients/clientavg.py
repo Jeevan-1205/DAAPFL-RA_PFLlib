@@ -14,6 +14,7 @@ class clientAVG(Client):
         trainloader = self.load_train_data()
         # self.model.to(self.device)
         self.model.train()
+        first_weight_before = next(self.model.parameters()).detach().clone()
         
         start_time = time.time()
 
@@ -69,14 +70,14 @@ class clientAVG(Client):
 
                 prev_end = time.time()
 
-                if batch_idx % 100 == 0:
-                    print(
-                        f"Batch {batch_idx} | "
-                        f"Load={load_time:.3f}s | "
-                        f"Transfer={transfer_time:.3f}s | "
-                        f"Forward={forward_time:.3f}s | "
-                        f"Backward={backward_time:.3f}s"
-                    )
+                # if batch_idx % 100 == 0:
+                #     print(
+                #         f"Batch {batch_idx} | "
+                #         f"Load={load_time:.3f}s | "
+                #         f"Transfer={transfer_time:.3f}s | "
+                #         f"Forward={forward_time:.3f}s | "
+                #         f"Backward={backward_time:.3f}s"
+                #     )
 
         # self.model.cpu()
 
@@ -87,6 +88,13 @@ class clientAVG(Client):
                     pass
                 else:
                     self.learning_rate_scheduler.step()
+        first_weight_after = next(self.model.parameters()).detach()
+
+        delta = torch.norm(first_weight_after - first_weight_before).item()
+
+        print(f"[Client {self.id}] Weight update norm = {delta:.6f}")
 
         self.train_time_cost['num_rounds'] += 1
         self.train_time_cost['total_cost'] += time.time() - start_time
+
+    

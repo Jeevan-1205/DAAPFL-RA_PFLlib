@@ -27,6 +27,7 @@ import torch.nn as nn
 import yaml
 from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
+from utils.segmentation_metrics import compute_f1_dam
 
 from utils.data_utils import read_client_data
 from utils.segmentation_metrics import segmentation_confusion_matrix, segmentation_metrics
@@ -370,35 +371,10 @@ def build_pooled_dataset(
 # ──────────────────────────────────────────────────────────────────────
 # Evaluation
 # ──────────────────────────────────────────────────────────────────────
-
-def compute_f1_dam(confusion, damage_classes, eps=1e-8):
-    """F1-dam: harmonic mean of per-class F1 across the damage severity
-    classes (i.e. every class except background/no-damage), following the
-    xBD/xView2 challenge convention for damage-classification F1. Harmonic
-    mean (rather than a plain average) means F1-dam is dragged down hard by
-    any single damage class the model is failing on -- it can't be
-    inflated by one strong class hiding a dead one.
-
-    Computed directly from the confusion matrix (rows=true, cols=pred),
-    independent of whatever utils.segmentation_metrics.segmentation_metrics
-    returns, so it doesn't depend on that module's internals.
-    """
-    cm = confusion.float()
-    per_class_f1 = []
-    for c in damage_classes:
-        tp = cm[c, c]
-        fp = cm[:, c].sum() - tp
-        fn = cm[c, :].sum() - tp
-        precision = tp / (tp + fp + eps)
-        recall = tp / (tp + fn + eps)
-        f1 = 2 * precision * recall / (precision + recall + eps)
-        per_class_f1.append(f1.item())
-
-    # harmonic mean, guarding against any exact-zero class killing the whole
-    # metric via division by zero (clamped to eps instead)
-    safe_f1s = [max(f, eps) for f in per_class_f1]
-    f1_dam = len(safe_f1s) / sum(1.0 / f for f in safe_f1s)
-    return f1_dam, per_class_f1
+from utils.segmentation_metrics import (
+    segmentation_metrics,
+    compute_f1_dam,
+)
 
 
 def evaluate(model, loader, num_classes, device,
@@ -616,6 +592,7 @@ def train_one_epoch(model, loader, loss_fn, optimizer, device):
     Uses a tqdm progress bar for per-batch feedback.
     """
     model.train()
+    
     running_loss = 0.0
     n_batches = 0
     current_lr = optimizer.param_groups[0]["lr"]

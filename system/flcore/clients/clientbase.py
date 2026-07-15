@@ -58,6 +58,10 @@ class Client(object):
             lr=self.learning_rate,
             momentum=args.momentum,
         )
+        print(f"[Client {self.id}] "
+                f"LR={self.optimizer.param_groups[0]['lr']:.6f} "
+                f"Momentum={self.optimizer.param_groups[0]['momentum']}")
+
         self.learning_rate_scheduler = None
 
         if args.lr_schedule == "cosine":
@@ -171,8 +175,7 @@ class Client(object):
         )
         
     def set_parameters(self, model):
-        for new_param, old_param in zip(model.parameters(), self.model.parameters()):
-            old_param.data = new_param.data.clone()
+        self.model.load_state_dict(model.state_dict(), strict=True)
 
     def clone_model(self, model, target):
         for param, target_param in zip(model.parameters(), target.parameters()):
