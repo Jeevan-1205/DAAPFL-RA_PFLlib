@@ -2,9 +2,9 @@ import torch
 import numpy as np
 import time
 import copy
-import torch.nn as nn
 from flcore.optimizers.fedoptimizer import PerturbedGradientDescent
 from flcore.clients.clientbase import Client
+from torch.cuda.amp import autocast, GradScaler
 
 
 class clientProx(Client):
@@ -15,80 +15,135 @@ class clientProx(Client):
 
         self.global_params = copy.deepcopy(list(self.model.parameters()))
 
-        self.loss = nn.CrossEntropyLoss()
+        self.scaler = GradScaler(enabled=self.device == "cuda")
         self.optimizer = PerturbedGradientDescent(
-            self.model.parameters(), lr=self.learning_rate, mu=self.mu)
-        self.learning_rate_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=self.optimizer, 
-            gamma=args.learning_rate_decay_gamma
-        )
+            self.model.parameters(), lr=self.learning_rate, mu=self.mu, momentum=args.momentum)
+
+        self.learning_rate_scheduler = None
+
+        if args.lr_schedule == "cosine":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=args.global_rounds,
+            )
+
+        elif args.lr_schedule == "step":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer,
+                step_size=args.lr_step_size,
+                gamma=args.lr_gamma,
+            )
+
+        elif args.lr_schedule == "cosine_warm_restarts":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=args.lr_t0,
+                T_mult=args.lr_tmult,
+            )
+
+        elif args.lr_schedule == "plateau":
+
+            self.learning_rate_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                mode="max",
+                factor=args.lr_plateau_factor,
+                patience=args.lr_plateau_patience,
+            )
 
     def train(self):
         trainloader = self.load_train_data()
-        start_time = time.time()
-
         # self.model.to(self.device)
         self.model.train()
+        
+        
+        start_time = time.time()
 
         max_local_epochs = self.local_epochs
         if self.train_slow:
             max_local_epochs = np.random.randint(1, max_local_epochs // 2)
 
         for epoch in range(max_local_epochs):
-            for x, y in trainloader:
+            print(f"Epoch {epoch}")
+            self.init_class_distribution_tracker()
+
+            prev_end = time.time()
+
+            for batch_idx, (x, y) in enumerate(trainloader):
+
+                # Time spent waiting for the next batch
+                load_time = time.time() - prev_end
+
+                transfer_start = time.time()
+
                 if type(x) == type([]):
                     x[0] = x[0].to(self.device)
                 else:
                     x = x.to(self.device)
+
                 y = y.to(self.device)
+                self.update_class_distribution_tracker(y)
+
+                transfer_time = time.time() - transfer_start
+
                 if self.train_slow:
                     time.sleep(0.1 * np.abs(np.random.rand()))
+
+                forward_start = time.time()
+
                 output = self.model(x)
                 loss = self.loss(output, y)
+
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step(self.global_params, self.device)
 
+               
+
+                if self.device == "cuda":
+                    torch.cuda.synchronize()
+
+                forward_time = time.time() - forward_start
+
+                backward_start = time.time()
+
+               
+
+                
+                backward_time = time.time() - backward_start
+
+                prev_end = time.time()
+
+                # if batch_idx % 100 == 0:
+                #     print(
+                #         f"Batch {batch_idx} | "
+                #         f"Load={load_time:.3f}s | "
+                #         f"Transfer={transfer_time:.3f}s | "
+                #         f"Forward={forward_time:.3f}s | "
+                #         f"Backward={backward_time:.3f}s"
+                #     )
+
         # self.model.cpu()
+            self.log_class_distribution_summary(epoch)
 
-        if self.learning_rate_decay:
-            self.learning_rate_scheduler.step()
+            if self.learning_rate_scheduler is not None:
 
+                if self.args.lr_schedule == "plateau":
+                    # We'll handle this later once we have a validation metric.
+                    pass
+                else:
+                    self.learning_rate_scheduler.step()
+        
+
+        
+
+        
         self.train_time_cost['num_rounds'] += 1
         self.train_time_cost['total_cost'] += time.time() - start_time
 
-
+    
     def set_parameters(self, model):
-        for new_param, global_param, param in zip(model.parameters(), self.global_params, self.model.parameters()):
-            global_param.data = new_param.data.clone()
-            param.data = new_param.data.clone()
-
-    def train_metrics(self):
-        trainloader = self.load_train_data()
-        # self.model = self.load_model('model')
-        # self.model.to(self.device)
-        self.model.eval()
-
-        train_num = 0
-        losses = 0
-        with torch.no_grad():
-            for x, y in trainloader:
-                if type(x) == type([]):
-                    x[0] = x[0].to(self.device)
-                else:
-                    x = x.to(self.device)
-                y = y.to(self.device)
-                output = self.model(x)
-                loss = self.loss(output, y)
-
-                gm = torch.cat([p.data.view(-1) for p in self.global_params], dim=0)
-                pm = torch.cat([p.data.view(-1) for p in self.model.parameters()], dim=0)
-                loss += 0.5 * self.mu * torch.norm(gm-pm, p=2)
-
-                train_num += y.shape[0]
-                losses += loss.item() * y.shape[0]
-
-        # self.model.cpu()
-        # self.save_model(self.model, 'model')
-
-        return losses, train_num
+        super().set_parameters(model)
+        self.global_params = copy.deepcopy(list(self.model.parameters()))

@@ -24,6 +24,7 @@ class clientAVG(Client):
 
         for epoch in range(max_local_epochs):
             print(f"Epoch {epoch}")
+            self.init_class_distribution_tracker()
 
             prev_end = time.time()
 
@@ -40,6 +41,7 @@ class clientAVG(Client):
                     x = x.to(self.device)
 
                 y = y.to(self.device)
+                self.update_class_distribution_tracker(y)
 
                 transfer_time = time.time() - transfer_start
 
@@ -81,6 +83,7 @@ class clientAVG(Client):
                 #     )
 
         # self.model.cpu()
+            self.log_class_distribution_summary(epoch)
 
             if self.learning_rate_scheduler is not None:
 

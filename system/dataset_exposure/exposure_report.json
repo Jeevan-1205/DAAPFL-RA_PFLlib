@@ -1,0 +1,821 @@
+[
+    {
+        "Client": "Earthquake",
+        "Num Patches": 144,
+        "Num Batches": 18,
+        "Total Pixels": 7225344,
+        "Background": {
+            "Total Pixels": 5321513,
+            "Percent Pixels": 73.6506524810445,
+            "Patches Containing": 144,
+            "Mean Px/Patch": 36954.95138888889,
+            "Median Px/Patch": 36185.0,
+            "Min Px/Patch": 17979.0,
+            "Max Px/Patch": 50087.0,
+            "Std Px/Patch": 7650.609958734828,
+            "Mean Px/(Pos Patch)": 36954.95138888889,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 144
+            },
+            "Positive Batches": 18,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 295639.6111111111
+        },
+        "No Damage": {
+            "Total Pixels": 1887447,
+            "Percent Pixels": 26.122590149340986,
+            "Patches Containing": 144,
+            "Mean Px/Patch": 13107.270833333334,
+            "Median Px/Patch": 13935.0,
+            "Min Px/Patch": 89.0,
+            "Max Px/Patch": 32197.0,
+            "Std Px/Patch": 7638.466206585541,
+            "Mean Px/(Pos Patch)": 13107.270833333334,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 1,
+                "101-1000": 13,
+                ">1000": 130
+            },
+            "Positive Batches": 18,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 104858.16666666667
+        },
+        "Minor": {
+            "Total Pixels": 12262,
+            "Percent Pixels": 0.1697081827522676,
+            "Patches Containing": 34,
+            "Mean Px/Patch": 85.15277777777777,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 2041.0,
+            "Std Px/Patch": 235.41194152911223,
+            "Mean Px/(Pos Patch)": 360.6470588235294,
+            "Occupancy": {
+                "0": 110,
+                "1-10": 0,
+                "11-100": 7,
+                "101-1000": 26,
+                ">1000": 1
+            },
+            "Positive Batches": 16,
+            "Percent Pos Batches": 88.88888888888889,
+            "Avg Px/Pos Batch": 766.375
+        },
+        "Major": {
+            "Total Pixels": 3855,
+            "Percent Pixels": 0.05335386107568027,
+            "Patches Containing": 17,
+            "Mean Px/Patch": 26.770833333333332,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 1552.0,
+            "Std Px/Patch": 142.96083956561515,
+            "Mean Px/(Pos Patch)": 226.76470588235293,
+            "Occupancy": {
+                "0": 127,
+                "1-10": 1,
+                "11-100": 8,
+                "101-1000": 7,
+                ">1000": 1
+            },
+            "Positive Batches": 13,
+            "Percent Pos Batches": 72.22222222222221,
+            "Avg Px/Pos Batch": 296.53846153846155
+        },
+        "Destroyed": {
+            "Total Pixels": 267,
+            "Percent Pixels": 0.003695325786564626,
+            "Patches Containing": 3,
+            "Mean Px/Patch": 1.8541666666666667,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 170.0,
+            "Std Px/Patch": 15.729911682135336,
+            "Mean Px/(Pos Patch)": 89.0,
+            "Occupancy": {
+                "0": 141,
+                "1-10": 0,
+                "11-100": 2,
+                "101-1000": 1,
+                ">1000": 0
+            },
+            "Positive Batches": 3,
+            "Percent Pos Batches": 16.666666666666664,
+            "Avg Px/Pos Batch": 89.0
+        },
+        "Background Analysis": {
+            "Only Background Patches": 0,
+            "No Damage Patches": 107,
+            "At Least One Damage Patch": 37,
+            "Multiple Damage Patches": 15
+        }
+    },
+    {
+        "Client": "Flood",
+        "Num Patches": 798,
+        "Num Batches": 100,
+        "Total Pixels": 40040448,
+        "Background": {
+            "Total Pixels": 38814603,
+            "Percent Pixels": 96.9384833056813,
+            "Patches Containing": 798,
+            "Mean Px/Patch": 48639.85338345865,
+            "Median Px/Patch": 49726.5,
+            "Min Px/Patch": 36297.0,
+            "Max Px/Patch": 50176.0,
+            "Std Px/Patch": 2473.374799652536,
+            "Mean Px/(Pos Patch)": 48639.85338345865,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 798
+            },
+            "Positive Batches": 100,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 388146.03
+        },
+        "No Damage": {
+            "Total Pixels": 1024139,
+            "Percent Pixels": 2.557761091983786,
+            "Patches Containing": 589,
+            "Mean Px/Patch": 1283.3822055137844,
+            "Median Px/Patch": 271.5,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 13879.0,
+            "Std Px/Patch": 2370.755308412292,
+            "Mean Px/(Pos Patch)": 1738.7758913412563,
+            "Occupancy": {
+                "0": 209,
+                "1-10": 23,
+                "11-100": 88,
+                "101-1000": 253,
+                ">1000": 225
+            },
+            "Positive Batches": 100,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 10241.39
+        },
+        "Minor": {
+            "Total Pixels": 103731,
+            "Percent Pixels": 0.25906553293309803,
+            "Patches Containing": 343,
+            "Mean Px/Patch": 129.98872180451127,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 4256.0,
+            "Std Px/Patch": 324.95817525071743,
+            "Mean Px/(Pos Patch)": 302.4227405247813,
+            "Occupancy": {
+                "0": 455,
+                "1-10": 12,
+                "11-100": 135,
+                "101-1000": 171,
+                ">1000": 25
+            },
+            "Positive Batches": 100,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 1037.31
+        },
+        "Major": {
+            "Total Pixels": 89443,
+            "Percent Pixels": 0.2233816165093857,
+            "Patches Containing": 332,
+            "Mean Px/Patch": 112.08395989974937,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 5413.0,
+            "Std Px/Patch": 339.5273867218871,
+            "Mean Px/(Pos Patch)": 269.4066265060241,
+            "Occupancy": {
+                "0": 466,
+                "1-10": 19,
+                "11-100": 154,
+                "101-1000": 143,
+                ">1000": 16
+            },
+            "Positive Batches": 99,
+            "Percent Pos Batches": 99.0,
+            "Avg Px/Pos Batch": 903.4646464646464
+        },
+        "Destroyed": {
+            "Total Pixels": 8532,
+            "Percent Pixels": 0.02130845289243517,
+            "Patches Containing": 192,
+            "Mean Px/Patch": 10.691729323308271,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 2550.0,
+            "Std Px/Patch": 94.63129986453767,
+            "Mean Px/(Pos Patch)": 44.4375,
+            "Occupancy": {
+                "0": 606,
+                "1-10": 77,
+                "11-100": 104,
+                "101-1000": 10,
+                ">1000": 1
+            },
+            "Positive Batches": 89,
+            "Percent Pos Batches": 89.0,
+            "Avg Px/Pos Batch": 95.86516853932584
+        },
+        "Background Analysis": {
+            "Only Background Patches": 76,
+            "No Damage Patches": 289,
+            "At Least One Damage Patch": 509,
+            "Multiple Damage Patches": 271
+        }
+    },
+    {
+        "Client": "Hurricane",
+        "Num Patches": 1517,
+        "Num Batches": 190,
+        "Total Pixels": 76116992,
+        "Background": {
+            "Total Pixels": 71269439,
+            "Percent Pixels": 93.63144434293987,
+            "Patches Containing": 1517,
+            "Mean Px/Patch": 46980.51351351351,
+            "Median Px/Patch": 49126.0,
+            "Min Px/Patch": 18484.0,
+            "Max Px/Patch": 50176.0,
+            "Std Px/Patch": 4212.567029758258,
+            "Mean Px/(Pos Patch)": 46980.51351351351,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 1517
+            },
+            "Positive Batches": 190,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 375102.31052631576
+        },
+        "No Damage": {
+            "Total Pixels": 2732717,
+            "Percent Pixels": 3.5901536939347265,
+            "Patches Containing": 1104,
+            "Mean Px/Patch": 1801.3955174686882,
+            "Median Px/Patch": 262.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 31692.0,
+            "Std Px/Patch": 3314.085701572832,
+            "Mean Px/(Pos Patch)": 2475.2871376811595,
+            "Occupancy": {
+                "0": 413,
+                "1-10": 42,
+                "11-100": 182,
+                "101-1000": 356,
+                ">1000": 524
+            },
+            "Positive Batches": 190,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 14382.72105263158
+        },
+        "Minor": {
+            "Total Pixels": 922495,
+            "Percent Pixels": 1.2119435828467842,
+            "Patches Containing": 804,
+            "Mean Px/Patch": 608.1048121292024,
+            "Median Px/Patch": 19.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 14397.0,
+            "Std Px/Patch": 1445.7653830199677,
+            "Mean Px/(Pos Patch)": 1147.3818407960198,
+            "Occupancy": {
+                "0": 713,
+                "1-10": 22,
+                "11-100": 160,
+                "101-1000": 352,
+                ">1000": 270
+            },
+            "Positive Batches": 189,
+            "Percent Pos Batches": 99.47368421052632,
+            "Avg Px/Pos Batch": 4880.925925925926
+        },
+        "Major": {
+            "Total Pixels": 1098864,
+            "Percent Pixels": 1.4436513728761116,
+            "Patches Containing": 906,
+            "Mean Px/Patch": 724.3665128543178,
+            "Median Px/Patch": 46.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 16200.0,
+            "Std Px/Patch": 2048.7785319032514,
+            "Mean Px/(Pos Patch)": 1212.8741721854306,
+            "Occupancy": {
+                "0": 611,
+                "1-10": 31,
+                "11-100": 248,
+                "101-1000": 412,
+                ">1000": 215
+            },
+            "Positive Batches": 190,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 5783.494736842105
+        },
+        "Destroyed": {
+            "Total Pixels": 93477,
+            "Percent Pixels": 0.12280700740249957,
+            "Patches Containing": 547,
+            "Mean Px/Patch": 61.61964403427818,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 2197.0,
+            "Std Px/Patch": 186.89944478739815,
+            "Mean Px/(Pos Patch)": 170.89031078610603,
+            "Occupancy": {
+                "0": 970,
+                "1-10": 43,
+                "11-100": 267,
+                "101-1000": 226,
+                ">1000": 11
+            },
+            "Positive Batches": 183,
+            "Percent Pos Batches": 96.3157894736842,
+            "Avg Px/Pos Batch": 510.8032786885246
+        },
+        "Background Analysis": {
+            "Only Background Patches": 72,
+            "No Damage Patches": 382,
+            "At Least One Damage Patch": 1135,
+            "Multiple Damage Patches": 759
+        }
+    },
+    {
+        "Client": "Tornado",
+        "Num Patches": 539,
+        "Num Batches": 68,
+        "Total Pixels": 27044864,
+        "Background": {
+            "Total Pixels": 24931752,
+            "Percent Pixels": 92.18664216614289,
+            "Patches Containing": 539,
+            "Mean Px/Patch": 46255.56957328386,
+            "Median Px/Patch": 46938.0,
+            "Min Px/Patch": 34549.0,
+            "Max Px/Patch": 50176.0,
+            "Std Px/Patch": 3684.534482504708,
+            "Mean Px/(Pos Patch)": 46255.56957328386,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 539
+            },
+            "Positive Batches": 68,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 366643.4117647059
+        },
+        "No Damage": {
+            "Total Pixels": 1609162,
+            "Percent Pixels": 5.949972608477528,
+            "Patches Containing": 484,
+            "Mean Px/Patch": 2985.4582560296844,
+            "Median Px/Patch": 1660.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 15627.0,
+            "Std Px/Patch": 3420.788053758931,
+            "Mean Px/(Pos Patch)": 3324.714876033058,
+            "Occupancy": {
+                "0": 55,
+                "1-10": 9,
+                "11-100": 44,
+                "101-1000": 123,
+                ">1000": 308
+            },
+            "Positive Batches": 68,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 23664.147058823528
+        },
+        "Minor": {
+            "Total Pixels": 199579,
+            "Percent Pixels": 0.7379552731343001,
+            "Patches Containing": 224,
+            "Mean Px/Patch": 370.2764378478664,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 6870.0,
+            "Std Px/Patch": 826.3123298361577,
+            "Mean Px/(Pos Patch)": 890.9776785714286,
+            "Occupancy": {
+                "0": 315,
+                "1-10": 1,
+                "11-100": 40,
+                "101-1000": 112,
+                ">1000": 71
+            },
+            "Positive Batches": 67,
+            "Percent Pos Batches": 98.52941176470588,
+            "Avg Px/Pos Batch": 2978.791044776119
+        },
+        "Major": {
+            "Total Pixels": 106599,
+            "Percent Pixels": 0.3941561695411003,
+            "Patches Containing": 148,
+            "Mean Px/Patch": 197.7717996289425,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 6460.0,
+            "Std Px/Patch": 584.9412778851748,
+            "Mean Px/(Pos Patch)": 720.2635135135135,
+            "Occupancy": {
+                "0": 391,
+                "1-10": 2,
+                "11-100": 31,
+                "101-1000": 81,
+                ">1000": 34
+            },
+            "Positive Batches": 64,
+            "Percent Pos Batches": 94.11764705882352,
+            "Avg Px/Pos Batch": 1665.609375
+        },
+        "Destroyed": {
+            "Total Pixels": 197772,
+            "Percent Pixels": 0.7312737827041763,
+            "Patches Containing": 154,
+            "Mean Px/Patch": 366.9239332096475,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 9581.0,
+            "Std Px/Patch": 1104.03422976134,
+            "Mean Px/(Pos Patch)": 1284.2337662337663,
+            "Occupancy": {
+                "0": 385,
+                "1-10": 4,
+                "11-100": 45,
+                "101-1000": 44,
+                ">1000": 61
+            },
+            "Positive Batches": 66,
+            "Percent Pos Batches": 97.05882352941177,
+            "Avg Px/Pos Batch": 2996.5454545454545
+        },
+        "Background Analysis": {
+            "Only Background Patches": 48,
+            "No Damage Patches": 290,
+            "At Least One Damage Patch": 249,
+            "Multiple Damage Patches": 160
+        }
+    },
+    {
+        "Client": "Tsunami",
+        "Num Patches": 258,
+        "Num Batches": 33,
+        "Total Pixels": 12945408,
+        "Background": {
+            "Total Pixels": 11304489,
+            "Percent Pixels": 87.32431608181062,
+            "Patches Containing": 258,
+            "Mean Px/Patch": 43815.848837209305,
+            "Median Px/Patch": 47459.5,
+            "Min Px/Patch": 16497.0,
+            "Max Px/Patch": 50176.0,
+            "Std Px/Patch": 8044.287530928428,
+            "Mean Px/(Pos Patch)": 43815.848837209305,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 258
+            },
+            "Positive Batches": 33,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 342560.2727272727
+        },
+        "No Damage": {
+            "Total Pixels": 1460488,
+            "Percent Pixels": 11.281900114697041,
+            "Patches Containing": 216,
+            "Mean Px/Patch": 5660.806201550387,
+            "Median Px/Patch": 2098.5,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 33679.0,
+            "Std Px/Patch": 7734.770328843742,
+            "Mean Px/(Pos Patch)": 6761.518518518518,
+            "Occupancy": {
+                "0": 42,
+                "1-10": 2,
+                "11-100": 10,
+                "101-1000": 43,
+                ">1000": 161
+            },
+            "Positive Batches": 32,
+            "Percent Pos Batches": 96.96969696969697,
+            "Avg Px/Pos Batch": 45640.25
+        },
+        "Minor": {
+            "Total Pixels": 43,
+            "Percent Pixels": 0.0003321641156462585,
+            "Patches Containing": 1,
+            "Mean Px/Patch": 0.16666666666666666,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 43.0,
+            "Std Px/Patch": 2.6718699236469003,
+            "Mean Px/(Pos Patch)": 43.0,
+            "Occupancy": {
+                "0": 257,
+                "1-10": 0,
+                "11-100": 1,
+                "101-1000": 0,
+                ">1000": 0
+            },
+            "Positive Batches": 1,
+            "Percent Pos Batches": 3.0303030303030303,
+            "Avg Px/Pos Batch": 43.0
+        },
+        "Major": {
+            "Total Pixels": 42840,
+            "Percent Pixels": 0.3309281561461794,
+            "Patches Containing": 83,
+            "Mean Px/Patch": 166.04651162790697,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 5556.0,
+            "Std Px/Patch": 544.8952941231909,
+            "Mean Px/(Pos Patch)": 516.144578313253,
+            "Occupancy": {
+                "0": 175,
+                "1-10": 0,
+                "11-100": 28,
+                "101-1000": 45,
+                ">1000": 10
+            },
+            "Positive Batches": 32,
+            "Percent Pos Batches": 96.96969696969697,
+            "Avg Px/Pos Batch": 1338.75
+        },
+        "Destroyed": {
+            "Total Pixels": 137548,
+            "Percent Pixels": 1.0625234832305015,
+            "Patches Containing": 100,
+            "Mean Px/Patch": 533.1317829457364,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 22501.0,
+            "Std Px/Patch": 1916.8351818599847,
+            "Mean Px/(Pos Patch)": 1375.48,
+            "Occupancy": {
+                "0": 158,
+                "1-10": 4,
+                "11-100": 28,
+                "101-1000": 36,
+                ">1000": 32
+            },
+            "Positive Batches": 32,
+            "Percent Pos Batches": 96.96969696969697,
+            "Avg Px/Pos Batch": 4298.375
+        },
+        "Background Analysis": {
+            "Only Background Patches": 37,
+            "No Damage Patches": 147,
+            "At Least One Damage Patch": 111,
+            "Multiple Damage Patches": 72
+        }
+    },
+    {
+        "Client": "Volcano",
+        "Num Patches": 239,
+        "Num Batches": 30,
+        "Total Pixels": 11992064,
+        "Background": {
+            "Total Pixels": 11902474,
+            "Percent Pixels": 99.25292259947912,
+            "Patches Containing": 239,
+            "Mean Px/Patch": 49801.14644351464,
+            "Median Px/Patch": 50107.0,
+            "Min Px/Patch": 45969.0,
+            "Max Px/Patch": 50176.0,
+            "Std Px/Patch": 615.1887075672909,
+            "Mean Px/(Pos Patch)": 49801.14644351464,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 239
+            },
+            "Positive Batches": 30,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 396749.13333333336
+        },
+        "No Damage": {
+            "Total Pixels": 74956,
+            "Percent Pixels": 0.6250466975493126,
+            "Patches Containing": 144,
+            "Mean Px/Patch": 313.6234309623431,
+            "Median Px/Patch": 41.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 3641.0,
+            "Std Px/Patch": 562.8580835454851,
+            "Mean Px/(Pos Patch)": 520.5277777777778,
+            "Occupancy": {
+                "0": 95,
+                "1-10": 16,
+                "11-100": 31,
+                "101-1000": 71,
+                ">1000": 26
+            },
+            "Positive Batches": 30,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 2498.5333333333333
+        },
+        "Minor": {
+            "Total Pixels": 2695,
+            "Percent Pixels": 0.02247319560669456,
+            "Patches Containing": 19,
+            "Mean Px/Patch": 11.276150627615063,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 566.0,
+            "Std Px/Patch": 55.759411988916234,
+            "Mean Px/(Pos Patch)": 141.8421052631579,
+            "Occupancy": {
+                "0": 220,
+                "1-10": 2,
+                "11-100": 7,
+                "101-1000": 10,
+                ">1000": 0
+            },
+            "Positive Batches": 14,
+            "Percent Pos Batches": 46.666666666666664,
+            "Avg Px/Pos Batch": 192.5
+        },
+        "Major": {
+            "Total Pixels": 1778,
+            "Percent Pixels": 0.014826471906754334,
+            "Patches Containing": 12,
+            "Mean Px/Patch": 7.439330543933054,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 1000.0,
+            "Std Px/Patch": 66.70138507632315,
+            "Mean Px/(Pos Patch)": 148.16666666666666,
+            "Occupancy": {
+                "0": 227,
+                "1-10": 1,
+                "11-100": 6,
+                "101-1000": 5,
+                ">1000": 0
+            },
+            "Positive Batches": 11,
+            "Percent Pos Batches": 36.666666666666664,
+            "Avg Px/Pos Batch": 161.63636363636363
+        },
+        "Destroyed": {
+            "Total Pixels": 10161,
+            "Percent Pixels": 0.0847310354581163,
+            "Patches Containing": 35,
+            "Mean Px/Patch": 42.51464435146443,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 1342.0,
+            "Std Px/Patch": 166.97695702955068,
+            "Mean Px/(Pos Patch)": 290.3142857142857,
+            "Occupancy": {
+                "0": 204,
+                "1-10": 3,
+                "11-100": 12,
+                "101-1000": 18,
+                ">1000": 2
+            },
+            "Positive Batches": 25,
+            "Percent Pos Batches": 83.33333333333334,
+            "Avg Px/Pos Batch": 406.44
+        },
+        "Background Analysis": {
+            "Only Background Patches": 84,
+            "No Damage Patches": 199,
+            "At Least One Damage Patch": 40,
+            "Multiple Damage Patches": 18
+        }
+    },
+    {
+        "Client": "Wildfire",
+        "Num Patches": 4779,
+        "Num Batches": 598,
+        "Total Pixels": 239791104,
+        "Background": {
+            "Total Pixels": 237089639,
+            "Percent Pixels": 98.87340899852565,
+            "Patches Containing": 4779,
+            "Mean Px/Patch": 49610.72169910023,
+            "Median Px/Patch": 50176.0,
+            "Min Px/Patch": 33192.0,
+            "Max Px/Patch": 50176.0,
+            "Std Px/Patch": 1679.3007475132054,
+            "Mean Px/(Pos Patch)": 49610.72169910023,
+            "Occupancy": {
+                "0": 0,
+                "1-10": 0,
+                "11-100": 0,
+                "101-1000": 0,
+                ">1000": 4779
+            },
+            "Positive Batches": 598,
+            "Percent Pos Batches": 100.0,
+            "Avg Px/Pos Batch": 396470.9682274248
+        },
+        "No Damage": {
+            "Total Pixels": 2250574,
+            "Percent Pixels": 0.93855608588382,
+            "Patches Containing": 1960,
+            "Mean Px/Patch": 470.9299016530655,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 16984.0,
+            "Std Px/Patch": 1523.5339419308411,
+            "Mean Px/(Pos Patch)": 1148.2520408163266,
+            "Occupancy": {
+                "0": 2819,
+                "1-10": 135,
+                "11-100": 443,
+                "101-1000": 859,
+                ">1000": 523
+            },
+            "Positive Batches": 591,
+            "Percent Pos Batches": 98.82943143812709,
+            "Avg Px/Pos Batch": 3808.077834179357
+        },
+        "Minor": {
+            "Total Pixels": 15728,
+            "Percent Pixels": 0.006559042323771945,
+            "Patches Containing": 264,
+            "Mean Px/Patch": 3.2910650763758107,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 1268.0,
+            "Std Px/Patch": 27.87523441998633,
+            "Mean Px/(Pos Patch)": 59.57575757575758,
+            "Occupancy": {
+                "0": 4515,
+                "1-10": 47,
+                "11-100": 175,
+                "101-1000": 41,
+                ">1000": 1
+            },
+            "Positive Batches": 217,
+            "Percent Pos Batches": 36.2876254180602,
+            "Avg Px/Pos Batch": 72.47926267281106
+        },
+        "Major": {
+            "Total Pixels": 23510,
+            "Percent Pixels": 0.009804367054417498,
+            "Patches Containing": 293,
+            "Mean Px/Patch": 4.919439213224524,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 2549.0,
+            "Std Px/Patch": 45.91814269367068,
+            "Mean Px/(Pos Patch)": 80.23890784982935,
+            "Occupancy": {
+                "0": 4486,
+                "1-10": 33,
+                "11-100": 197,
+                "101-1000": 62,
+                ">1000": 1
+            },
+            "Positive Batches": 245,
+            "Percent Pos Batches": 40.96989966555184,
+            "Avg Px/Pos Batch": 95.95918367346938
+        },
+        "Destroyed": {
+            "Total Pixels": 411653,
+            "Percent Pixels": 0.17167150621234056,
+            "Patches Containing": 920,
+            "Mean Px/Patch": 86.137894957104,
+            "Median Px/Patch": 0.0,
+            "Min Px/Patch": 0.0,
+            "Max Px/Patch": 13735.0,
+            "Std Px/Patch": 581.0717839524798,
+            "Mean Px/(Pos Patch)": 447.4489130434783,
+            "Occupancy": {
+                "0": 3859,
+                "1-10": 70,
+                "11-100": 387,
+                "101-1000": 384,
+                ">1000": 79
+            },
+            "Positive Batches": 490,
+            "Percent Pos Batches": 81.93979933110369,
+            "Avg Px/Pos Batch": 840.1081632653061
+        },
+        "Background Analysis": {
+            "Only Background Patches": 2624,
+            "No Damage Patches": 3746,
+            "At Least One Damage Patch": 1033,
+            "Multiple Damage Patches": 352
+        }
+    }
+]

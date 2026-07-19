@@ -1,5 +1,5 @@
 import torch
-from torch.optim import Optimizer
+from torch.optim import Optimizer, SGD
 
 
 class PerAvgOptimizer(Optimizer):
@@ -61,15 +61,19 @@ class APFLOptimizer(Optimizer):
                 p.data.add_(-group['lr'], d_p)
 
 
-class PerturbedGradientDescent(Optimizer):
-    def __init__(self, params, lr=0.01, mu=0.0):
-        default = dict(lr=lr, mu=mu)
-        super().__init__(params, default)
+class PerturbedGradientDescent(SGD):
+    def __init__(self, params, lr=0.01, mu=0.0, momentum=0, **kwargs):
+        super().__init__(params, lr=lr, momentum=momentum, **kwargs)
+        self.defaults['mu'] = mu
+        for group in self.param_groups:
+            group['mu'] = mu
 
     @torch.no_grad()
     def step(self, global_params, device):
         for group in self.param_groups:
             for p, g in zip(group['params'], global_params):
+                if p.grad is None:
+                    continue
                 g = g.to(device)
-                d_p = p.grad.data + group['mu'] * (p.data - g.data)
-                p.data.add_(d_p, alpha=-group['lr'])
+                p.grad.data.add_(group['mu'] * (p.data - g.data))
+        super().step()

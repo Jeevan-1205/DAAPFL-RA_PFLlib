@@ -280,6 +280,96 @@ class Client(object):
             item_path = self.save_folder_name
         return torch.load(os.path.join(item_path, "client_" + str(self.id) + "_" + item_name + ".pt"))
 
+    def init_class_distribution_tracker(self):
+        self._track_total_pixels = np.zeros(self.num_classes, dtype=np.int64)
+        self._track_num_batches = 0
+        self._track_batches_with_minor = 0
+        self._track_batches_with_major = 0
+        self._track_batches_with_destroyed = 0
+        self._track_batches_zero_minor = 0
+        self._track_batches_zero_major = 0
+        self._track_batches_zero_destroyed = 0
+
+    def update_class_distribution_tracker(self, y):
+        with torch.no_grad():
+            y_flat = y.detach().reshape(-1)
+            batch_counts = np.zeros(self.num_classes, dtype=np.int64)
+            for c in range(self.num_classes):
+                batch_counts[c] = (y_flat == c).sum().item()
+            
+            self._track_total_pixels += batch_counts
+            self._track_num_batches += 1
+            
+            if self.num_classes > 2:
+                if batch_counts[2] > 0:
+                    self._track_batches_with_minor += 1
+                else:
+                    self._track_batches_zero_minor += 1
+            
+            if self.num_classes > 3:
+                if batch_counts[3] > 0:
+                    self._track_batches_with_major += 1
+                else:
+                    self._track_batches_zero_major += 1
+            
+            if self.num_classes > 4:
+                if batch_counts[4] > 0:
+                    self._track_batches_with_destroyed += 1
+                else:
+                    self._track_batches_zero_destroyed += 1
+
+    def log_class_distribution_summary(self, epoch):
+        disaster_names = [
+            'Earthquake', 'Flood', 'Hurricane', 'Tornado',
+            'Tsunami', 'Volcano', 'Wildfire',
+        ]
+        if self.id < len(disaster_names):
+            d_name = disaster_names[self.id]
+        else:
+            d_name = f"ID_{self.id}"
+        
+        header = f"Client {self.id} ({d_name})"
+        print(f"\n{header}")
+        print("-" * len(header))
+        
+        if self._track_num_batches > 0:
+            avg_pixels = self._track_total_pixels / self._track_num_batches
+            pct_minor = (self._track_batches_with_minor / self._track_num_batches) * 100.0 if self.num_classes > 2 else 0.0
+            pct_major = (self._track_batches_with_major / self._track_num_batches) * 100.0 if self.num_classes > 3 else 0.0
+            pct_destroyed = (self._track_batches_with_destroyed / self._track_num_batches) * 100.0 if self.num_classes > 4 else 0.0
+        else:
+            avg_pixels = np.zeros(self.num_classes)
+            pct_minor = pct_major = pct_destroyed = 0.0
+        
+        print("Total batch pixels:")
+        print(f"Background : {self._track_total_pixels[0]:,}")
+        if self.num_classes > 1:
+            print(f"No Damage  : {self._track_total_pixels[1]:,}")
+        if self.num_classes > 2:
+            print(f"Minor      : {self._track_total_pixels[2]:,}")
+        if self.num_classes > 3:
+            print(f"Major      : {self._track_total_pixels[3]:,}")
+        if self.num_classes > 4:
+            print(f"Destroyed  : {self._track_total_pixels[4]:,}")
+        print("\nAverage batch pixels:")
+        print(f"Background : {avg_pixels[0]:.1f}")
+        if self.num_classes > 1:
+            print(f"No Damage  : {avg_pixels[1]:.1f}")
+        if self.num_classes > 2:
+            print(f"Minor      : {avg_pixels[2]:.1f}")
+        if self.num_classes > 3:
+            print(f"Major      : {avg_pixels[3]:.1f}")
+        if self.num_classes > 4:
+            print(f"Destroyed  : {avg_pixels[4]:.1f}")
+        print("\nBatch coverage:")
+        if self.num_classes > 2:
+            print(f"Minor present in      {pct_minor:5.1f}% ({self._track_batches_with_minor} batches present, {self._track_batches_zero_minor} batches zero)")
+        if self.num_classes > 3:
+            print(f"Major present in      {pct_major:5.1f}% ({self._track_batches_with_major} batches present, {self._track_batches_zero_major} batches zero)")
+        if self.num_classes > 4:
+            print(f"Destroyed present in  {pct_destroyed:5.1f}% ({self._track_batches_with_destroyed} batches present, {self._track_batches_zero_destroyed} batches zero)")
+        print()
+
     # @staticmethod
     # def model_exists():
     #     return os.path.exists(os.path.join("models", "server" + ".pt"))

@@ -192,7 +192,7 @@ def run(args):
         #print(args.model)
 
         # select algorithm
-        if args.algorithm == "FedAvg" and args.dataset == "xBD":
+        if args.algorithm in ["FedAvg", "Local", "FedPer", "FedRep", "Ditto", "SCAFFOLD", "pFedMe"] and args.dataset == "xBD":
             server = ServerSegmentation(args, i)
 
         elif args.algorithm == "FedAvg":
@@ -394,7 +394,6 @@ def run(args):
     # if not (args.dataset == "xBD" and args.protocol == "lodo"):
     #     average_data(dataset=args.dataset, algorithm=args.algorithm, goal=args.goal, times=args.times)
     # if os.path.exists(server.summary_csv_path):
-    print(f"Summary saved to {server.summary_csv_path}")
     print("All done!")
 
    # reporter.report()
@@ -582,7 +581,7 @@ if __name__ == "__main__":
     # Save argparse defaults
     default_args = parser.parse_args([])
 
-    args = load_yaml_config(args, default_args)
+    args = load_yaml_config(args, default_args, parser)
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device_id
 

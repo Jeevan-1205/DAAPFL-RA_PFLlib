@@ -54,11 +54,12 @@ class DiceLoss(nn.Module):
             denominator + self.smooth
         )
 
-        #
-        # NEW
-        #
-
-        present = onehot.sum(dims) > 0
+        # Only compute Dice for classes that are actually present in the GT of
+        # this batch (standard present-class masking).  When a class has no GT
+        # pixels, there is no meaningful Dice signal and computing it produces a
+        # suppressive gradient that pushes the model to predict zero probability
+        # for that class — harming rare classes in non-IID federated settings.
+        present = onehot.sum(dim=(0, 2, 3)) > 0
         if not self.include_background:
             present[0] = False
 
