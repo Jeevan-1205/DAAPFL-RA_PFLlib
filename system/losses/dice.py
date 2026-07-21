@@ -25,6 +25,7 @@ class DiceLoss(nn.Module):
 
         valid = target != self.ignore_index
 
+
         tgt = target.clone()
         tgt[~valid] = 0
 

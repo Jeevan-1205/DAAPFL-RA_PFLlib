@@ -1,6 +1,4 @@
 import time
-import torch
-import torch.nn as nn
 from flcore.clients.clientlc import clientLC
 from flcore.servers.serverbase import Server
 from threading import Thread
@@ -10,20 +8,9 @@ class FedLC(Server):
     def __init__(self, args, times):
         super().__init__(args, times)
 
-        self.feature_dim = list(args.model.head.parameters())[0].shape[1]
-        args.head = nn.Linear(self.feature_dim, args.num_classes, bias=False).to(args.device)
-
         # select slow clients
         self.set_slow_clients()
         self.set_clients(clientLC)
-
-        sample_per_class = torch.zeros(args.num_classes).to(args.device)
-        for client in self.clients:
-            for y in range(args.num_classes):
-                sample_per_class[y] += client.sample_per_class[y]
-        val = args.tau * sample_per_class ** (-1/4)
-        for client in self.clients:
-            client.calibration = torch.tile(val, (args.batch_size, 1))
 
         print(f"\nJoin ratio / total clients: {self.join_ratio} / {self.num_clients}")
         print("Finished creating server and clients.")

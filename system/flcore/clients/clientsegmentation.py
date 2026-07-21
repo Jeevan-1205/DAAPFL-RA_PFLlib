@@ -73,6 +73,27 @@ class clientSegmentation(clientAVG):
             elif args.lr_schedule == "plateau":
                 self.learning_rate_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode="max", factor=args.lr_plateau_factor, patience=args.lr_plateau_patience)
 
+        elif self.algorithm == "FedLC":
+            self.sample_per_class = torch.zeros(self.num_classes).to(self.device)
+            trainloader = self.load_train_data()
+            
+            for x, y in trainloader:
+                y = y.to(self.device)
+                valid = y != self.segmentation_ignore_index
+                self.sample_per_class += torch.bincount(y[valid].flatten(), minlength=self.num_classes).float()
+                
+            val = args.tau * (self.sample_per_class + 1e-8) ** (-0.25)
+            self.calibration = val.to(self.device)
+            
+            original_loss = self.loss
+            def calibrated_loss(output, target):
+                cal_shape = [1, self.num_classes] + [1] * (output.dim() - 2)
+                calibrated_output = output - self.calibration.view(cal_shape)
+                return original_loss(calibrated_output, target)
+                
+            self.loss = calibrated_loss
+
+
     def set_parameters(self, model, global_c=None):
         if self.algorithm == "SCAFFOLD":
             self.global_c = global_c

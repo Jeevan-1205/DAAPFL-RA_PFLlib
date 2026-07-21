@@ -12,54 +12,21 @@ import yaml
 from utils.config import load_yaml_config
 from flcore.servers.serveravg import FedAvg
 from flcore.servers.serverpFedMe import pFedMe
-from flcore.servers.serverperavg import PerAvg
 from flcore.servers.serverprox import FedProx
-from flcore.servers.serverfomo import FedFomo
-from flcore.servers.serveramp import FedAMP
-from flcore.servers.servermtl import FedMTL
 from flcore.servers.serverlocal import Local
 from flcore.servers.serverper import FedPer
-from flcore.servers.serverapfl import APFL
 from flcore.servers.serverditto import Ditto
 from flcore.servers.serverrep import FedRep
-from flcore.servers.serverphp import FedPHP
-from flcore.servers.serverbn import FedBN
-from flcore.servers.serverrod import FedROD
-from flcore.servers.serverproto import FedProto
-from flcore.servers.serverdyn import FedDyn
-from flcore.servers.servermoon import MOON
-from flcore.servers.serverbabu import FedBABU
-from flcore.servers.serverapple import APPLE
-from flcore.servers.servergen import FedGen
 from flcore.servers.serverscaffold import SCAFFOLD
-from flcore.servers.serverfd import FD
 from flcore.servers.serverala import FedALA
-from flcore.servers.serverpac import FedPAC
-from flcore.servers.serverlg import LG_FedAvg
-from flcore.servers.servergc import FedGC
-from flcore.servers.serverfml import FML
-from flcore.servers.serverkd import FedKD
-from flcore.servers.serverpcl import FedPCL
-from flcore.servers.servercp import FedCP
-from flcore.servers.servergpfl import GPFL
-from flcore.servers.serverntd import FedNTD
-from flcore.servers.servergh import FedGH
-from flcore.servers.serverdbe import FedDBE
-from flcore.servers.servercac import FedCAC
-from flcore.servers.serverda import PFL_DA
 from flcore.servers.serverlc import FedLC
-from flcore.servers.serveras import FedAS
-from flcore.servers.servercross import FedCross
 from flcore.servers.serversegmentation import ServerSegmentation
+from flcore.servers.serverdaapfl import ServerDAAPFL
 from flcore.trainmodel.siamese_unet import SiameseUNet
 
 from flcore.trainmodel.models import *
 
-from flcore.trainmodel.bilstm import *
 from flcore.trainmodel.resnet import *
-from flcore.trainmodel.alexnet import *
-from flcore.trainmodel.mobilenet_v2 import *
-from flcore.trainmodel.transformer import *
 
 from utils.result_utils import average_data
 from utils.mem_utils import MemReporter
@@ -192,8 +159,11 @@ def run(args):
         #print(args.model)
 
         # select algorithm
-        if args.algorithm in ["FedAvg", "Local", "FedPer", "FedRep", "Ditto", "SCAFFOLD", "pFedMe"] and args.dataset == "xBD":
+        if args.algorithm in ["FedAvg", "Local", "FedPer", "FedRep", "Ditto", "SCAFFOLD", "pFedMe", "FedLC"] and args.dataset == "xBD":
             server = ServerSegmentation(args, i)
+
+        elif args.algorithm == "DAAPFL-RA":
+            server = ServerDAAPFL(args, i)
 
         elif args.algorithm == "FedAvg":
             args.head = copy.deepcopy(args.model.fc)
@@ -204,26 +174,11 @@ def run(args):
         elif args.algorithm == "Local":
             server = Local(args, i)
 
-        elif args.algorithm == "FedMTL":
-            server = FedMTL(args, i)
-
-        elif args.algorithm == "PerAvg":
-            server = PerAvg(args, i)
-
         elif args.algorithm == "pFedMe":
             server = pFedMe(args, i)
 
         elif args.algorithm == "FedProx":
             server = FedProx(args, i)
-
-        elif args.algorithm == "FedFomo":
-            server = FedFomo(args, i)
-
-        elif args.algorithm == "FedAMP":
-            server = FedAMP(args, i)
-
-        elif args.algorithm == "APFL":
-            server = APFL(args, i)
 
         elif args.algorithm == "FedPer":
             args.head = copy.deepcopy(args.model.fc)
@@ -240,142 +195,17 @@ def run(args):
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedRep(args, i)
 
-        elif args.algorithm == "FedPHP":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedPHP(args, i)
-
-        elif args.algorithm == "FedBN":
-            server = FedBN(args, i)
-
-        elif args.algorithm == "FedROD":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedROD(args, i)
-
-        elif args.algorithm == "FedProto":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedProto(args, i)
-
-        elif args.algorithm == "FedDyn":
-            server = FedDyn(args, i)
-
-        elif args.algorithm == "MOON":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = MOON(args, i)
-
-        elif args.algorithm == "FedBABU":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedBABU(args, i)
-
-        elif args.algorithm == "APPLE":
-            server = APPLE(args, i)
-
-        elif args.algorithm == "FedGen":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedGen(args, i)
-
         elif args.algorithm == "SCAFFOLD":
             server = SCAFFOLD(args, i)
 
-        elif args.algorithm == "FD":
-            server = FD(args, i)
-
         elif args.algorithm == "FedALA":
             server = FedALA(args, i)
-
-        elif args.algorithm == "FedPAC":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedPAC(args, i)
-
-        elif args.algorithm == "LG-FedAvg":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = LG_FedAvg(args, i)
-
-        elif args.algorithm == "FedGC":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedGC(args, i)
-
-        elif args.algorithm == "FML":
-            server = FML(args, i)
-
-        elif args.algorithm == "FedKD":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedKD(args, i)
-
-        elif args.algorithm == "FedPCL":
-            args.model.fc = nn.Identity()
-            server = FedPCL(args, i)
-
-        elif args.algorithm == "FedCP":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedCP(args, i)
-
-        elif args.algorithm == "GPFL":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = GPFL(args, i)
-
-        elif args.algorithm == "FedNTD":
-            server = FedNTD(args, i)
-
-        elif args.algorithm == "FedGH":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedGH(args, i)
-
-        elif args.algorithm == "FedDBE":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedDBE(args, i)
-
-        elif args.algorithm == 'FedCAC':
-            server = FedCAC(args, i)
-
-        elif args.algorithm == 'PFL-DA':
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = PFL_DA(args, i)
 
         elif args.algorithm == 'FedLC':
             args.head = copy.deepcopy(args.model.fc)
             args.model.fc = nn.Identity()
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedLC(args, i)
-
-        elif args.algorithm == 'FedAS':
-
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
-            args.model = BaseHeadSplit(args.model, args.head)
-            server = FedAS(args, i)
-            
-        elif args.algorithm == "FedCross":
-            server = FedCross(args, i)
 
         else:
             raise NotImplementedError
@@ -515,8 +345,9 @@ if __name__ == "__main__":
     # FedALA
     parser.add_argument('-et', "--eta", type=float, default=1.0)
     parser.add_argument('-s', "--rand_percent", type=int, default=80)
-    parser.add_argument('-p', "--layer_idx", type=int, default=2,
+    parser.add_argument('-p', "--layer_idx", type=int, default=0,
                         help="More fine-graind than its original paper.")
+    parser.add_argument("--ala_threshold", type=float, default=0.1)
     # FedKD
     parser.add_argument('-mlr', "--mentee_learning_rate", type=float, default=0.005)
     parser.add_argument('-Ts', "--T_start", type=float, default=0.95)
@@ -524,6 +355,15 @@ if __name__ == "__main__":
     # FedDBE
     parser.add_argument('-mo', "--momentum", type=float, default=0.1)
     parser.add_argument('-klw', "--kl_weight", type=float, default=0.0)
+
+    # DAAPFL-RA
+    parser.add_argument("--tau_agg", type=float, default=0.5, help="Temperature for Softmax aggregation")
+    parser.add_argument("--beta_ema", type=float, default=0.9, help="Momentum for historical reliability smoothing")
+    parser.add_argument("--kappa", type=float, default=1.0, help="Sigmoid scaling for Generalization Gain")
+    parser.add_argument("--omega", type=float, default=0.5, help="Weighting factor between Gain and Alignment")
+    parser.add_argument("--rho", type=float, default=0.1, help="L2 penalty coefficient for ALA Reliability-Guided Prior")
+    parser.add_argument("--lambda_max", type=float, default=1.0, help="Maximum proximal regularization coefficient")
+    parser.add_argument("--gamma", type=float, default=5.0, help="Decay rate for proximal regularization")
 
     # FedCross
     parser.add_argument('-fsb', "--first_stage_bound", type=int, default=0)

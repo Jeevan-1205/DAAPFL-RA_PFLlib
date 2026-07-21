@@ -474,10 +474,11 @@ class ServerSegmentation(Server):
         result_path = self._get_result_path()
         run_name = self._get_run_name()
 
-        shutil.copy(
-            self.args.config,
-            os.path.join(result_path, "config.yaml")
-        )
+        if self.args.config and os.path.isfile(self.args.config):
+            shutil.copy(
+                self.args.config,
+                os.path.join(result_path, "config.yaml")
+            )
         # --------------------------------------------------
         # Result directory
         # --------------------------------------------------
